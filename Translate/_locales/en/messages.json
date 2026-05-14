@@ -1,0 +1,8 @@
+{
+  "name": {
+    "message": "Translate"
+  },
+  "description": {
+    "message": "A lightweight translation extension powered by Google Translate"
+  }
+}
