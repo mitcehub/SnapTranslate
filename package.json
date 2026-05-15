@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "rollup -c"
+    "build": "rollup -c",
+    "build:firefox": "rollup -c && node scripts/switch-manifest.js firefox",
+    "build:chrome": "rollup -c && node scripts/switch-manifest.js chrome"
   },
   "devDependencies": {
     "rollup": "^4.0.0",

@@ -35,23 +35,15 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "<all_urls>"
-      ],
-      "js": [
-        "static/js/content.js"
-      ],
-      "css": [
-        "static/css/content.css"
-      ],
+      "matches": ["<all_urls>"],
+      "js": ["static/js/content.js"],
+      "css": ["static/css/content.css"],
       "run_at": "document_end"
     }
   ],
   "web_accessible_resources": [
     {
-      "matches": [
-        "<all_urls>"
-      ],
+      "matches": ["<all_urls>"],
       "resources": [
         "assets/16.png",
         "assets/32.png",

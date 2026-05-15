@@ -8,7 +8,7 @@ export default [
     output: {
       file: `${outputDir}/content.js`,
       format: 'iife',
-      sourcemap: true,
+      sourcemap: false,
     },
     plugins: [resolve()],
     onwarn(warning, warn) {
@@ -23,7 +23,7 @@ export default [
     output: {
       file: `${outputDir}/background.js`,
       format: 'iife',
-      sourcemap: true,
+      sourcemap: false,
     },
     plugins: [resolve()],
     onwarn(warning, warn) {
@@ -38,7 +38,7 @@ export default [
     output: {
       file: `${outputDir}/options.js`,
       format: 'iife',
-      sourcemap: true,
+      sourcemap: false,
     },
     plugins: [resolve()],
     onwarn(warning, warn) {

@@ -2,7 +2,8 @@ import { translate } from './translate-engine.js';
 import { initRules } from './rules-data.js';
 import { handleMessage } from './message-handler.js';
 
-chrome.action.onClicked.addListener(() => {
+const action = chrome.action || chrome.browserAction;
+action.onClicked.addListener(() => {
   chrome.runtime.openOptionsPage();
 });
 
