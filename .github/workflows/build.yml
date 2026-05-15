@@ -22,18 +22,27 @@ jobs:
 
       - run: npm run build
 
-      - name: Package extension
+      - name: Upload extension directory
+        uses: actions/upload-artifact@v4
+        with:
+          name: ez-translate-extension
+          path: Translate/
+          retention-days: 30
+
+      - name: Package as zip for Chrome Web Store
         run: |
+          mkdir -p dist
           cd Translate
-          zip -r ../ez-translate.zip \
+          zip -r ../dist/ez-translate.zip \
             manifest.json \
             options.html \
             assets/ \
             static/ \
             _locales/
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload zip
+        uses: actions/upload-artifact@v4
         with:
-          name: ez-translate
-          path: ez-translate.zip
+          name: ez-translate-zip
+          path: dist/ez-translate.zip
           retention-days: 30
