@@ -452,8 +452,7 @@
     return false;
   }
 
-  const action = chrome.action || chrome.browserAction;
-  action.onClicked.addListener(() => {
+  chrome.action.onClicked.addListener(() => {
     chrome.runtime.openOptionsPage();
   });
 
