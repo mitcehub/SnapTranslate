@@ -1,9 +1,7 @@
-name: Build Extension
+name: Build & Release
 
 on:
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -22,27 +20,25 @@ jobs:
 
       - run: npm run build
 
-      - name: Upload extension directory
-        uses: actions/upload-artifact@v4
-        with:
-          name: ez-translate-extension
-          path: Translate/
-          retention-days: 30
-
-      - name: Package as zip for Chrome Web Store
+      - name: Package extension
         run: |
-          mkdir -p dist
           cd Translate
-          zip -r ../dist/ez-translate.zip \
+          zip -r ../ez-translate.zip \
             manifest.json \
             options.html \
             assets/ \
             static/ \
             _locales/
 
-      - name: Upload zip
-        uses: actions/upload-artifact@v4
+      - name: Get version
+        id: version
+        run: echo "v=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: ez-translate-zip
-          path: dist/ez-translate.zip
-          retention-days: 30
+          tag_name: v${{ steps.version.outputs.v }}
+          name: EZ-Translate v${{ steps.version.outputs.v }}
+          files: ez-translate.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
