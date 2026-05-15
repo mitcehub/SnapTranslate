@@ -19,11 +19,19 @@ jobs:
           cache: npm
 
       - run: npm ci
+      - run: npm install archiver
 
       - run: npm run build
 
-      - name: Pack .crx extension
-        run: node scripts/pack-crx.mjs Translate ez-translate.crx
+      - name: Pack Chrome .crx
+        run: |
+          echo "${{ secrets.CHROME_PRIVATE_KEY }}" > chrome.pem
+          node scripts/pack-crx.mjs Translate ez-translate-chrome.crx
+
+      - name: Pack Edge .crx
+        run: |
+          echo "${{ secrets.EDGE_PRIVATE_KEY }}" > edge.pem
+          node scripts/pack-crx.mjs Translate ez-translate-edge.crx
 
       - name: Get version
         id: version
@@ -34,6 +42,24 @@ jobs:
         with:
           tag_name: v${{ steps.version.outputs.v }}
           name: EZ-Translate v${{ steps.version.outputs.v }}
-          files: ez-translate.crx
+          files: |
+            ez-translate-chrome.crx
+            ez-translate-edge.crx
+          body: |
+            ## 安装说明
+
+            ### Chrome 版本
+            1. 下载 `ez-translate-chrome.crx`
+            2. 地址栏输入 `chrome://extensions/`
+            3. 开启右上角"开发者模式"
+            4. 拖拽 `.crx` 到页面即可安装
+
+            ### Edge 版本
+            1. 下载 `ez-translate-edge.crx`
+            2. 地址栏输入 `edge://extensions/`
+            3. 开启左下角"开发者模式"
+            4. 拖拽 `.crx` 到页面即可安装
+
+            > 如果拖拽安装失败，请解压 ZIP 包后用"加载已解压的扩展程序"方式安装。
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
