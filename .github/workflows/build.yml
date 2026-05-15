@@ -22,15 +22,8 @@ jobs:
 
       - run: npm run build
 
-      - name: Package extension
-        run: |
-          cd Translate
-          zip -r ../ez-translate.zip \
-            manifest.json \
-            options.html \
-            assets/ \
-            static/ \
-            _locales/
+      - name: Pack .crx extension
+        run: node scripts/pack-crx.mjs Translate ez-translate.crx
 
       - name: Get version
         id: version
@@ -41,6 +34,6 @@ jobs:
         with:
           tag_name: v${{ steps.version.outputs.v }}
           name: EZ-Translate v${{ steps.version.outputs.v }}
-          files: ez-translate.zip
+          files: ez-translate.crx
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
