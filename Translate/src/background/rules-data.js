@@ -1,3 +1,5 @@
+import { getSettings } from './settings.js';
+
 const DEFAULT_RULES_URL = "https://raw.githubusercontent.com/translate-ext/rules/main/rules.json";
 
 const DEF_RULES = [
@@ -67,11 +69,11 @@ async function loadRulesFromStorage() {
       cachedMerged = mergeRules(DEF_RULES, remoteRules);
       return cachedMerged;
     }
-  } catch { }
+  } catch {}
   return null;
 }
 
-async function saveRemoteRules(rules, etag) {
+export async function saveRemoteRules(rules, etag) {
   try {
     remoteRules = rules;
     rulesETag = etag;
@@ -82,7 +84,7 @@ async function saveRemoteRules(rules, etag) {
       siteRulesETag: etag || null,
       siteRulesLastFetch: rulesLastFetch
     });
-  } catch { }
+  } catch {}
 }
 
 async function fetchRemoteRules() {
@@ -107,7 +109,7 @@ async function fetchRemoteRules() {
   }
 }
 
-async function getSiteRules() {
+export async function getSiteRules() {
   if (cachedMerged) {
     const now = Date.now();
     if ((now - rulesLastFetch) < RULES_CACHE_TTL) return cachedMerged;
@@ -116,7 +118,7 @@ async function getSiteRules() {
   if (!cachedMerged) {
     const stored = await loadRulesFromStorage();
     if (stored) {
-      fetchRemoteRules().catch(() => { });
+      fetchRemoteRules().catch(() => {});
       return stored;
     }
   }
@@ -126,7 +128,7 @@ async function getSiteRules() {
   return rules;
 }
 
-function matchRule(rules, url) {
+export function matchRule(rules, url) {
   try {
     const hostname = new URL(url).hostname;
     for (const rule of rules) {
@@ -136,14 +138,21 @@ function matchRule(rules, url) {
         if (hostname.includes(p.trim())) return rule;
       }
     }
-  } catch { }
+  } catch {}
   return null;
 }
 
-async function initRules() {
+export async function initRules() {
   const stored = await loadRulesFromStorage();
   if (!stored) {
     cachedMerged = [...DEF_RULES];
-    fetchRemoteRules().catch(() => { });
+    fetchRemoteRules().catch(() => {});
   }
 }
+
+export function resetRulesCache() {
+  rulesLastFetch = 0;
+  cachedMerged = null;
+}
+
+export { fetchRemoteRules };

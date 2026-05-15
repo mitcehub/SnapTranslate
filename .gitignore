@@ -1,0 +1,6 @@
+node_modules/
+.arts/
+*.map
+*.bak
+spec/
+Translate/node_modules/

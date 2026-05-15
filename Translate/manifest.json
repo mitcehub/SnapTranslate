@@ -5,27 +5,25 @@
   "default_locale": "en",
   "version": "1.35.0",
   "icons": {
-    "16": "assets/256.png",
-    "32": "assets/256.png",
-    "48": "assets/256.png",
-    "128": "assets/256.png"
+    "16": "assets/16.png",
+    "32": "assets/32.png",
+    "48": "assets/48.png",
+    "128": "assets/128.png"
   },
   "background": {
     "service_worker": "static/js/background.js"
   },
   "action": {
     "default_icon": {
-      "16": "assets/256.png",
-      "32": "assets/256.png",
-      "48": "assets/256.png",
-      "128": "assets/256.png"
+      "16": "assets/16.png",
+      "32": "assets/32.png",
+      "48": "assets/48.png",
+      "128": "assets/128.png"
     },
     "default_title": "__MSG_name__"
   },
   "permissions": [
     "storage",
-    "contextMenus",
-    "scripting",
     "activeTab"
   ],
   "host_permissions": [
@@ -47,7 +45,15 @@
     {
       "matches": ["<all_urls>"],
       "resources": [
+        "assets/16.png",
+        "assets/32.png",
+        "assets/48.png",
+        "assets/128.png",
         "assets/256.png",
+        "assets/dark-16.png",
+        "assets/dark-32.png",
+        "assets/dark-48.png",
+        "assets/dark-128.png",
         "assets/dark-256.png",
         "static/css/*"
       ]

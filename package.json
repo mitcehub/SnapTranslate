@@ -1,0 +1,13 @@
+{
+  "name": "ez-translate",
+  "version": "1.35.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c"
+  },
+  "devDependencies": {
+    "rollup": "^4.0.0",
+    "@rollup/plugin-node-resolve": "^15.0.0"
+  }
+}

@@ -1,0 +1,109 @@
+export const LANGS = [
+  { c: "auto", n: "Detect" },
+  { c: "zh-CN", n: "中文(简体)" },
+  { c: "zh-TW", n: "中文(繁体)" },
+  { c: "en", n: "English" },
+  { c: "ja", n: "日本語" },
+  { c: "ko", n: "한국어" },
+  { c: "fr", n: "Français" },
+  { c: "de", n: "Deutsch" },
+  { c: "es", n: "Español" },
+  { c: "pt", n: "Português" },
+  { c: "ru", n: "Русский" },
+  { c: "ar", n: "العربية" },
+  { c: "th", n: "ไทย" },
+  { c: "vi", n: "Tiếng Việt" },
+  { c: "id", n: "Indonesia" },
+  { c: "it", n: "Italiano" },
+  { c: "nl", n: "Nederlands" },
+  { c: "pl", n: "Polski" },
+  { c: "tr", n: "Türkçe" },
+  { c: "hi", n: "हिन्दी" },
+];
+
+export const ENGINES = [
+  { id: "google", name: "Google" },
+  { id: "bing", name: "Bing" },
+];
+
+export const INLINE_DISPLAYS = new Set([
+  "inline", "inline-block", "inline-flex", "inline-grid",
+  "inline-table", "ruby", "ruby-base", "ruby-text",
+  "math", "inline-math",
+]);
+
+export const IGNORE_TAGS = new Set([
+  "SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "SELECT",
+  "CODE", "KBD", "SVG", "MATH", "INPUT", "BUTTON",
+  "IMG", "VIDEO", "AUDIO", "IFRAME", "OBJECT", "EMBED",
+  "CANVAS", "MAP", "AREA", "TRACK", "WBR", "BR",
+]);
+
+export const BLOCK_TAGS = new Set([
+  "DIV", "SECTION", "ARTICLE", "MAIN", "HEADER", "FOOTER",
+  "ASIDE", "NAV", "DETAILS", "SUMMARY", "FIGURE", "FIGCAPTION",
+  "FIELDSET", "FORM", "H1", "H2", "H3", "H4", "H5", "H6",
+  "P", "BLOCKQUOTE", "PRE", "OL", "UL", "LI", "DL", "DT", "DD",
+  "TABLE", "THEAD", "TBODY", "TFOOT", "TR", "TD", "TH",
+  "HR", "ADDRESS",
+]);
+
+export const BROWSER_LANG_MAP = {
+  "zh": "zh-CN", "zh-cn": "zh-CN", "zh-tw": "zh-TW", "zh-hk": "zh-TW",
+  "en": "en", "en-us": "en", "en-gb": "en",
+  "ja": "ja", "ko": "ko", "fr": "fr", "de": "de",
+  "es": "es", "pt": "pt", "pt-br": "pt",
+  "ru": "ru", "ar": "ar", "th": "th", "vi": "vi",
+  "id": "id", "it": "it", "nl": "nl", "pl": "pl",
+  "tr": "tr", "hi": "hi",
+};
+
+export const TTS_LANG_MAP = {
+  "auto": "en", "zh-CN": "zh-CN", "zh-TW": "zh-TW", "en": "en",
+  "ja": "ja", "ko": "ko", "fr": "fr", "de": "de", "es": "es",
+  "pt": "pt", "ru": "ru", "ar": "ar", "th": "th", "vi": "vi",
+  "id": "id", "it": "it", "nl": "nl", "pl": "pl", "tr": "tr", "hi": "hi",
+};
+
+export function getBrowserLang() {
+  const nav = navigator.language || "en";
+  const lower = nav.toLowerCase();
+  if (BROWSER_LANG_MAP[lower]) return BROWSER_LANG_MAP[lower];
+  const prefix = lower.split("-")[0];
+  return BROWSER_LANG_MAP[prefix] || "en";
+}
+
+export function detectTextLang(text) {
+  if (/[\u4e00-\u9fff]/.test(text)) {
+    if (/[\u4e00-\u9fff]/.test(text) && !/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "zh-CN";
+  }
+  if (/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "ja";
+  if (/[\uac00-\ud7af]/.test(text)) return "ko";
+  if (/[\u0400-\u04ff]/.test(text)) return "ru";
+  if (/[\u0600-\u06ff]/.test(text)) return "ar";
+  if (/[\u0e00-\u0e7f]/.test(text)) return "th";
+  if (/[\u1a00-\u1a1f]/.test(text)) return "vi";
+  if (/[\u0900-\u097f]/.test(text)) return "hi";
+  if (/[a-zA-Z]/.test(text)) return "en";
+  return null;
+}
+
+export function escHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+export function isIgnored(text, ignLangs) {
+  if (!ignLangs || !ignLangs.length) return false;
+  const detected = detectTextLang(text);
+  if (!detected) return false;
+  return ignLangs.some((ign) => {
+    if (ign === detected) return true;
+    return ign.split("-")[0] === detected.split("-")[0];
+  });
+}
+
+export function sendMessage(msg) {
+  return chrome.runtime.sendMessage(msg);
+}
