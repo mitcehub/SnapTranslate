@@ -56,39 +56,27 @@ export function handleMessage(req, sender, respond) {
   }
 
   if (req.action === "getSiteRule") {
-    (async () => {
-      const rules = await getSiteRules();
+    getSiteRules().then((rules) => {
       const url = req.url || sender.tab?.url || "";
-      const rule = matchRule(rules, url);
-      respond({ rule });
-    })();
+      respond({ rule: matchRule(rules, url) });
+    });
     return true;
   }
 
   if (req.action === "getAllRules") {
-    (async () => {
-      const rules = await getSiteRules();
-      respond({ rules });
-    })();
+    getSiteRules().then((rules) => respond({ rules }));
     return true;
   }
 
   if (req.action === "refreshRules") {
-    (async () => {
-      resetRulesCache();
-      const rules = await fetchRemoteRules();
-      respond({ rules: rules || [] });
-    })();
+    resetRulesCache();
+    fetchRemoteRules().then((rules) => respond({ rules: rules || [] }));
     return true;
   }
 
   if (req.action === "updateRules") {
-    (async () => {
-      const rules = req.rules;
-      if (!Array.isArray(rules)) { respond({ success: false }); return; }
-      await saveRemoteRules(rules, null);
-      respond({ success: true });
-    })();
+    if (!Array.isArray(req.rules)) { respond({ success: false }); return false; }
+    saveRemoteRules(req.rules, null).then(() => respond({ success: true }));
     return true;
   }
 

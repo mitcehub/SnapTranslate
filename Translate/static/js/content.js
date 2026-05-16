@@ -1,36 +1,20 @@
 (function () {
   'use strict';
 
-  function injectStyles() {
-    if (document.getElementById("tr-ext-styles")) return;
-    const s = document.createElement("style");
-    s.id = "tr-ext-styles";
-    s.textContent = `.tr-float{position:fixed;z-index:2147483640;width:36px;height:36px;border-radius:50%;background:transparent;border:none;box-shadow:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s;user-select:none;overflow:visible;touch-action:none}.tr-float:hover{transform:scale(1.1)}.tr-float.tr-dragging{transition:none;transform:scale(1.15)}.tr-float img{width:32px;height:32px;border-radius:50%;object-fit:cover;pointer-events:none}.tr-float-check{position:absolute;bottom:-2px;right:-2px;width:16px;height:16px;border-radius:50%;background:#4CAF50;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(.3);transition:opacity .2s,transform .2s;pointer-events:none}.tr-float-check svg{width:10px;height:10px;color:#fff}.tr-float.tr-translated .tr-float-check{opacity:1;transform:scale(1)}.tr-float-x{position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(.5);transition:opacity .15s,transform .15s;cursor:pointer;z-index:1}.tr-float-x svg{width:10px;height:10px;color:#9ca3af;pointer-events:none}.tr-float:hover .tr-float-x{opacity:1;transform:scale(1)}.tr-float-x:hover{background:#fee2e2}.tr-float-x:hover svg{color:#ef4444}.tr-float-menu{position:fixed;z-index:2147483641;background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.14);padding:6px 0;min-width:200px;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;animation:trFadeIn .12s ease}.tr-float-menu-item{display:flex;align-items:flex-start;gap:10px;padding:9px 14px;cursor:pointer;color:#374151;transition:background .1s}.tr-float-menu-item:hover{background:#f3f4f6}.tr-float-menu-item.danger{color:#ef4444}.tr-float-menu-item.danger .tr-menu-desc{color:#fca5a5}.tr-float-menu-item svg{width:16px;height:16px;flex-shrink:0;margin-top:2px}.tr-menu-text{display:flex;flex-direction:column;gap:1px}.tr-menu-label{font-size:13px;font-weight:500;line-height:1.3}.tr-menu-desc{font-size:11px;color:#9ca3af;line-height:1.3}.tr-menu-sep{height:1px;background:#e5e7eb;margin:4px 14px}.tr-bar{position:fixed;z-index:2147483645;display:flex;align-items:center;padding:0;background:transparent;border:none;box-shadow:none;font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;user-select:none;animation:trFadeIn .12s ease;gap:2px}@keyframes trFadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}.tr-btn{display:inline-flex;align-items:center;justify-content:center;height:28px;padding:0 10px;border:none;border-radius:7px;background:transparent;color:#374151;cursor:pointer;font:12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-weight:500;transition:all .15s;gap:4px;white-space:nowrap}.tr-btn:hover{background:#f3f4f6}.tr-btn.tr-primary{background:#4f46e5;color:#fff}.tr-btn.tr-primary:hover{background:#4338ca}.tr-btn svg{width:14px;height:14px;flex-shrink:0}.tr-panel{position:fixed;z-index:2147483644;min-width:280px;max-width:480px;max-height:min(420px,calc(100vh - 24px));background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.14),0 2px 6px rgba(0,0,0,.08);font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;animation:trFadeIn .15s ease;overflow:visible;display:flex;flex-direction:column}.tr-phead{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 0}.tr-plang{display:flex;align-items:center;gap:4px;position:relative}.tr-arrow{color:#9ca3af;font-size:13px;flex-shrink:0}.tr-pclose{width:22px;height:22px;border:none;border-radius:4px;background:transparent;color:#9ca3af;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}.tr-pclose:hover{background:#f3f4f6;color:#374151}.tr-pbody{padding:8px 14px 12px;overflow-y:auto;flex:1;min-height:0}.tr-original{font-size:11px;color:#9ca3af;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #f3f4f6;word-break:break-word;max-height:70px;overflow-y:auto;display:flex;align-items:flex-start;gap:6px}.tr-original-text{flex:1;min-width:0}.tr-result{color:#1f2937;word-break:break-word;font-size:13px;line-height:1.6;max-height:240px;overflow-y:auto;display:flex;align-items:flex-start;gap:6px}.tr-result-text{flex:1;min-width:0}.tr-speak-btn{flex-shrink:0;width:24px;height:24px;border:none;border-radius:4px;background:transparent;color:#9ca3af;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:color .15s,background .15s}.tr-speak-btn:hover{color:#4f46e5;background:#eef2ff}.tr-speak-btn.speaking{color:#4f46e5;animation:trPulse 1s ease infinite}.tr-loading{display:flex;align-items:center;gap:8px;color:#9ca3af;padding:8px 0}.tr-spinner{width:14px;height:14px;border:2px solid #e5e7eb;border-top-color:#4f46e5;border-radius:50%;animation:trSpin .6s linear infinite}@keyframes trSpin{to{transform:rotate(360deg)}}@keyframes trPulse{0%,100%{opacity:1}50%{opacity:.5}}.tr-actions{display:flex;gap:6px;margin-top:8px}.tr-copy-btn,.tr-replace-btn{padding:5px 10px;border:1px solid #e5e7eb;border-radius:5px;background:#f9fafb;color:#6b7280;cursor:pointer;font-size:11px;font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:3px}.tr-copy-btn:hover,.tr-replace-btn:hover{background:#f3f4f6;color:#374151}.tr-copy-btn.copied{background:#ecfdf5;color:#059669;border-color:#a7f3d0}.tr-replace-btn{background:#eef2ff;color:#4f46e5;border-color:#c7d2fe}.tr-replace-btn:hover{background:#e0e7ff}.tr-toast{position:fixed;z-index:2147483647;bottom:80px;left:50%;transform:translateX(-50%);padding:8px 20px;background:#059669;color:#fff;border-radius:8px;font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-weight:500;pointer-events:none;animation:trToast .3s ease}@keyframes trToast{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}.tr-bilingual{color:inherit;word-break:break-word}.tr-br{display:block;margin-top:2px;content:""}.tr-dd{position:relative;display:inline-block}.tr-dd-btn{height:26px;line-height:26px;padding:0 20px 0 6px;border:1px solid #e5e7eb;border-radius:5px;font-size:11px;color:#374151;background:#fff;cursor:pointer;outline:none;min-width:85px;text-align:left;appearance:none;-webkit-appearance:none;position:relative;vertical-align:middle}.tr-dd-btn:hover{border-color:#d1d5db}.tr-dd-btn::after{content:"▾";position:absolute;right:5px;top:50%;transform:translateY(-50%);font-size:10px;color:#9ca3af;pointer-events:none}.tr-dd-btn[disabled]{opacity:.5;cursor:default;background:#f9fafb}.tr-dd-list{position:absolute;top:100%;left:0;z-index:10;min-width:100%;max-height:min(280px,calc(100vh - 80px));overflow-y:auto;background:#fff;border:1px solid #e5e7eb;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.12);margin-top:2px;padding:2px 0;display:none}.tr-dd-list.tr-dd-open{display:block}.tr-dd-item{padding:4px 8px;font-size:11px;color:#374151;cursor:pointer;white-space:nowrap;line-height:1.4}.tr-dd-item:hover{background:#f3f4f6}.tr-dd-item.tr-dd-active{color:#4f46e5;font-weight:600}.tr-engine-sep{width:1px;height:16px;background:#e5e7eb;margin:0 2px;flex-shrink:0}.tr-engine-btn{min-width:60px;font-size:10px;height:22px;line-height:22px;padding:0 16px 0 4px;border-radius:4px}[data-tr-theme="dark"] .tr-float{background:transparent;border:none;box-shadow:none}[data-tr-theme="dark"] .tr-float-x{background:#2d2d2d;box-shadow:0 1px 4px rgba(0,0,0,.4)}[data-tr-theme="dark"] .tr-float-x:hover{background:#7f1d1d}[data-tr-theme="dark"] .tr-float-x svg{color:#6b7280}[data-tr-theme="dark"] .tr-float-x:hover svg{color:#fca5a5}[data-tr-theme="dark"] .tr-float-menu{background:#1e1e1e;border-color:#333;box-shadow:0 8px 32px rgba(0,0,0,.4)}[data-tr-theme="dark"] .tr-float-menu-item{color:#d1d5db}[data-tr-theme="dark"] .tr-float-menu-item:hover{background:#2d2d2d}[data-tr-theme="dark"] .tr-float-menu-item.danger{color:#f87171}[data-tr-theme="dark"] .tr-float-menu-item.danger .tr-menu-desc{color:#7f1d1d}[data-tr-theme="dark"] .tr-menu-desc{color:#6b7280}[data-tr-theme="dark"] .tr-menu-sep{background:#333}[data-tr-theme="dark"] .tr-bar{background:transparent;border:none;box-shadow:none}[data-tr-theme="dark"] .tr-btn{color:#d1d5db}[data-tr-theme="dark"] .tr-btn:hover{background:#2d2d2d}[data-tr-theme="dark"] .tr-btn.tr-primary{background:#4f46e5;color:#fff}[data-tr-theme="dark"] .tr-btn.tr-primary:hover{background:#6366f1}[data-tr-theme="dark"] .tr-panel{background:#1e1e1e;border-color:#333;box-shadow:0 8px 32px rgba(0,0,0,.5),0 2px 6px rgba(0,0,0,.3)}[data-tr-theme="dark"] .tr-pclose{color:#6b7280}[data-tr-theme="dark"] .tr-pclose:hover{background:#2d2d2d;color:#d1d5db}[data-tr-theme="dark"] .tr-arrow{color:#6b7280}[data-tr-theme="dark"] .tr-original{color:#6b7280;border-bottom-color:#333}[data-tr-theme="dark"] .tr-result{color:#e5e7eb}[data-tr-theme="dark"] .tr-loading{color:#6b7280}[data-tr-theme="dark"] .tr-spinner{border-color:#333;border-top-color:#6366f1}[data-tr-theme="dark"] .tr-copy-btn,[data-tr-theme="dark"] .tr-replace-btn{background:#2d2d2d;border-color:#333;color:#9ca3af}[data-tr-theme="dark"] .tr-copy-btn:hover,[data-tr-theme="dark"] .tr-replace-btn:hover{background:#374151;color:#e5e7eb}[data-tr-theme="dark"] .tr-copy-btn.copied{background:#052e16;color:#34d399;border-color:#064e3b}[data-tr-theme="dark"] .tr-replace-btn{background:#312e81;color:#c7d2fe;border-color:#4338ca}[data-tr-theme="dark"] .tr-replace-btn:hover{background:#3730a3}[data-tr-theme="dark"] .tr-toast{background:#059669;color:#fff}[data-tr-theme="dark"] .tr-speak-btn{color:#6b7280}[data-tr-theme="dark"] .tr-speak-btn:hover{color:#818cf8;background:#2d2d2d}[data-tr-theme="dark"] .tr-speak-btn.speaking{color:#818cf8}[data-tr-theme="dark"] .tr-dd-btn{background:#2d2d2d;border-color:#333;color:#d1d5db}[data-tr-theme="dark"] .tr-dd-btn:hover{border-color:#4b5563}[data-tr-theme="dark"] .tr-dd-btn[disabled]{background:#1e1e1e;color:#6b7280}[data-tr-theme="dark"] .tr-dd-list{background:#2d2d2d;border-color:#333;box-shadow:0 4px 16px rgba(0,0,0,.5)}[data-tr-theme="dark"] .tr-dd-item{color:#d1d5db}[data-tr-theme="dark"] .tr-dd-item:hover{background:#374151}[data-tr-theme="dark"] .tr-dd-item.tr-dd-active{color:#818cf8}[data-tr-theme="dark"] .tr-engine-sep{background:#333}[data-tr-theme="dark"] .tr-float-menu-item.danger .tr-menu-desc{color:#7f1d1d}`;
-    document.head.appendChild(s);
-  }
-
-  const LANGS = [
-    { c: "auto", n: "Detect" },
-    { c: "zh-CN", n: "中文(简体)" },
-    { c: "zh-TW", n: "中文(繁体)" },
-    { c: "en", n: "English" },
-    { c: "ja", n: "日本語" },
-    { c: "ko", n: "한국어" },
-    { c: "fr", n: "Français" },
-    { c: "de", n: "Deutsch" },
-    { c: "es", n: "Español" },
-    { c: "pt", n: "Português" },
-    { c: "ru", n: "Русский" },
-    { c: "ar", n: "العربية" },
-    { c: "th", n: "ไทย" },
-    { c: "vi", n: "Tiếng Việt" },
-    { c: "id", n: "Indonesia" },
-    { c: "it", n: "Italiano" },
-    { c: "nl", n: "Nederlands" },
-    { c: "pl", n: "Polski" },
-    { c: "tr", n: "Türkçe" },
-    { c: "hi", n: "हिन्दी" },
+  const LANG_CODES = [
+    "auto", "zh-CN", "zh-TW", "en", "ja", "ko", "fr", "de", "es",
+    "pt", "ru", "ar", "th", "vi", "id", "it", "nl", "pl", "tr", "hi",
   ];
+
+  const LANG_NAMES = {
+    auto: "Detect", "zh-CN": "中文(简体)", "zh-TW": "中文(繁体)",
+    en: "English", ja: "日本語", ko: "한국어", fr: "Français",
+    de: "Deutsch", es: "Español", pt: "Português", ru: "Русский",
+    ar: "العربية", th: "ไทย", vi: "Tiếng Việt", id: "Indonesia",
+    it: "Italiano", nl: "Nederlands", pl: "Polski", tr: "Türkçe", hi: "हिन्दी",
+  };
+
+  const LANGS = LANG_CODES.map((code) => ({ code, name: LANG_NAMES[code] }));
 
   const ENGINES = [
     { id: "google", name: "Google" },
@@ -46,7 +30,7 @@
 
   function detectTextLang(text) {
     if (/[\u4e00-\u9fff]/.test(text)) {
-      if (/[\u4e00-\u9fff]/.test(text) && !/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "zh-CN";
+      if (!/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "zh-CN";
     }
     if (/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "ja";
     if (/[\uac00-\ud7af]/.test(text)) return "ko";
@@ -100,11 +84,15 @@
 
   let currentAudio = null;
 
+  function clearSpeakingBtn() {
+    const btn = document.querySelector(".tr-speak-btn.speaking");
+    if (btn) btn.classList.remove("speaking");
+  }
+
   function stopSpeak() {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (currentAudio) { currentAudio.pause(); currentAudio.src = ""; currentAudio = null; }
-    const playing = document.querySelector(".tr-speak-btn.speaking");
-    if (playing) playing.classList.remove("speaking");
+    clearSpeakingBtn();
   }
 
   function speak(text, lang) {
@@ -118,13 +106,8 @@
       utter.rate = 1;
       const matched = voices.find((v) => v.lang === ttsLang);
       if (matched) utter.voice = matched;
-      utter.addEventListener("end", () => {
-        const btn = document.querySelector(".tr-speak-btn.speaking");
-        if (btn) btn.classList.remove("speaking");
-      });
-      utter.addEventListener("error", () => {
-        speakGoogleTTS(text, ttsLang);
-      });
+      utter.addEventListener("end", () => clearSpeakingBtn());
+      utter.addEventListener("error", () => { clearSpeakingBtn(); speakGoogleTTS(text, ttsLang); });
       speechSynthesis.speak(utter);
       return;
     }
@@ -136,21 +119,10 @@
     const url = `https://translate.googleapis.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${lang}&client=dict-chrome-ex`;
     const audio = new Audio(url);
     currentAudio = audio;
-    audio.addEventListener("ended", () => {
-      currentAudio = null;
-      const btn = document.querySelector(".tr-speak-btn.speaking");
-      if (btn) btn.classList.remove("speaking");
-    });
-    audio.addEventListener("error", () => {
-      currentAudio = null;
-      const btn = document.querySelector(".tr-speak-btn.speaking");
-      if (btn) btn.classList.remove("speaking");
-    });
-    audio.play().catch(() => {
-      currentAudio = null;
-      const btn = document.querySelector(".tr-speak-btn.speaking");
-      if (btn) btn.classList.remove("speaking");
-    });
+    const onDone = () => { currentAudio = null; clearSpeakingBtn(); };
+    audio.addEventListener("ended", onDone);
+    audio.addEventListener("error", onDone);
+    audio.play().catch(onDone);
   }
 
   let openDropdown = null;
@@ -176,12 +148,12 @@
 
     let currentName = "";
     LANGS.forEach((l) => {
-      if (!includeAuto && l.c === "auto") return;
+      if (!includeAuto && l.code === "auto") return;
       const item = document.createElement("div");
-      item.className = "tr-dd-item" + (l.c === val ? " tr-dd-active" : "");
-      item.textContent = l.n;
-      item.dataset.code = l.c;
-      if (l.c === val) currentName = l.n;
+      item.className = "tr-dd-item" + (l.code === val ? " tr-dd-active" : "");
+      item.textContent = l.name;
+      item.dataset.code = l.code;
+      if (l.code === val) currentName = l.name;
       item.addEventListener("mousedown", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -644,7 +616,6 @@
   }, true);
 
   async function init() {
-    injectStyles();
     try {
       const r = await sendMessage({ action: "getSettings" });
       if (r && r.settings) S = { ...S, ...r.settings };

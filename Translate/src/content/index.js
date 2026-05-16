@@ -1,4 +1,3 @@
-import { injectStyles } from './ui/styles.js';
 import { isOwn, showToast, closeDropdown, positionPanel, attachSpeakHandlers, attachCopyHandler } from './ui/components.js';
 import { svgIcon } from './ui/icons.js';
 import { escHtml, sendMessage, isIgnored } from '../shared/constants.js';
@@ -41,7 +40,6 @@ document.addEventListener("keydown", (e) => {
 }, true);
 
 async function init() {
-  injectStyles();
   try {
     const r = await sendMessage({ action: "getSettings" });
     if (r && r.settings) S = { ...S, ...r.settings };

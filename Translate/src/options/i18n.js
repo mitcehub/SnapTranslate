@@ -1,24 +1,16 @@
-export const LANGS = [
-  { code: "zh-CN", name: "中文(简体)" },
-  { code: "zh-TW", name: "中文(繁体)" },
-  { code: "en", name: "English" },
-  { code: "ja", name: "日本語" },
-  { code: "ko", name: "한국어" },
-  { code: "fr", name: "Français" },
-  { code: "de", name: "Deutsch" },
-  { code: "es", name: "Español" },
-  { code: "pt", name: "Português" },
-  { code: "ru", name: "Русский" },
-  { code: "ar", name: "العربية" },
-  { code: "th", name: "ไทย" },
-  { code: "vi", name: "Tiếng Việt" },
-  { code: "id", name: "Indonesia" },
-  { code: "it", name: "Italiano" },
-  { code: "nl", name: "Nederlands" },
-  { code: "pl", name: "Polski" },
-  { code: "tr", name: "Türkçe" },
-  { code: "hi", name: "हिन्दी" },
-];
+import { LANG_CODES } from '../shared/constants.js';
+
+function makeLangNames(names) {
+  return LANG_CODES.map((code) => ({ code, name: names[code] || code }));
+}
+
+export const LANGS = makeLangNames({
+  "zh-CN": "中文(简体)", "zh-TW": "中文(繁体)",
+  en: "English", ja: "日本語", ko: "한국어", fr: "Français",
+  de: "Deutsch", es: "Español", pt: "Português", ru: "Русский",
+  ar: "العربية", th: "ไทย", vi: "Tiếng Việt", id: "Indonesia",
+  it: "Italiano", nl: "Nederlands", pl: "Polski", tr: "Türkçe", hi: "हिन्दी",
+});
 
 export const I18N = {
   en: {

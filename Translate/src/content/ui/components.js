@@ -28,12 +28,12 @@ export function buildDropdown(id, val, includeAuto, onChange, disabled, panelRef
 
   let currentName = "";
   LANGS.forEach((l) => {
-    if (!includeAuto && l.c === "auto") return;
+    if (!includeAuto && l.code === "auto") return;
     const item = document.createElement("div");
-    item.className = "tr-dd-item" + (l.c === val ? " tr-dd-active" : "");
-    item.textContent = l.n;
-    item.dataset.code = l.c;
-    if (l.c === val) currentName = l.n;
+    item.className = "tr-dd-item" + (l.code === val ? " tr-dd-active" : "");
+    item.textContent = l.name;
+    item.dataset.code = l.code;
+    if (l.code === val) currentName = l.name;
     item.addEventListener("mousedown", (e) => {
       e.preventDefault();
       e.stopPropagation();

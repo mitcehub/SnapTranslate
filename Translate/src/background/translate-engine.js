@@ -10,8 +10,13 @@ export async function translate(text, sl, tl, engine) {
 
   const eng = engine || "google";
   const key = `${eng}:${sl}:${tl}:${text.substring(0, 200)}`;
+
   const cached = cache.get(key);
-  if (cached) return cached;
+  if (cached) {
+    cache.delete(key);
+    cache.set(key, cached);
+    return cached;
+  }
 
   let result;
 
@@ -23,7 +28,10 @@ export async function translate(text, sl, tl, engine) {
       result = await translateGoogle(text, sl, tl);
   }
 
-  if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);
   cache.set(key, result);
+  if (cache.size > CACHE_MAX) {
+    const first = cache.keys().next().value;
+    if (first !== undefined) cache.delete(first);
+  }
   return result;
 }

@@ -66,52 +66,54 @@
     bingConfig = null;
   }
 
-  async function translateBing(text, sl, tl, _retry) {
-    const config = await getBingConfig();
-    const bsl = bingLang(sl);
-    const btl = bingLang(tl);
+  async function translateBing(text, sl, tl) {
+    let lastError;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const config = await getBingConfig();
+        const bsl = bingLang(sl);
+        const btl = bingLang(tl);
 
-    const body = new URLSearchParams({
-      fromLang: bsl,
-      text: text,
-      token: config.token,
-      key: config.key,
-      to: btl,
-    });
+        const body = new URLSearchParams({
+          fromLang: bsl,
+          text: text,
+          token: config.token,
+          key: config.key,
+          to: btl,
+        });
 
-    const url = `https://www.bing.com/ttranslatev3?isVertical=1&IG=${config.ig}&IID=${config.iid}.1`;
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Referer": "https://www.bing.com/translator",
-      },
-      body: body.toString(),
-    });
+        const url = `https://www.bing.com/ttranslatev3?isVertical=1&IG=${config.ig}&IID=${config.iid}.1`;
+        const resp = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Referer": "https://www.bing.com/translator",
+          },
+          body: body.toString(),
+        });
 
-    if (!resp.ok) {
-      if (!_retry) {
-        clearBingConfig();
-        return translateBing(text, sl, tl, true);
+        if (!resp.ok) {
+          if (attempt === 0) { clearBingConfig(); continue; }
+          throw new Error(`HTTP ${resp.status}`);
+        }
+
+        const data = await resp.json();
+
+        if (data.ShowCaptcha || data.StatusCode === 401) {
+          if (attempt === 0) { clearBingConfig(); continue; }
+          throw new Error(data.ShowCaptcha ? "Captcha required" : "Unauthorized");
+        }
+
+        if (!data || !data[0] || !data[0].translations || !data[0].translations[0]) {
+          throw new Error("Unexpected response format");
+        }
+
+        return data[0].translations[0].text;
+      } catch (e) {
+        lastError = e;
+        if (attempt === 1) throw lastError;
       }
-      throw new Error(`HTTP ${resp.status}`);
     }
-
-    const data = await resp.json();
-
-    if (data.ShowCaptcha || data.StatusCode === 401) {
-      if (!_retry) {
-        clearBingConfig();
-        return translateBing(text, sl, tl, true);
-      }
-      throw new Error(data.ShowCaptcha ? "Captcha required" : "Unauthorized");
-    }
-
-    if (!data || !data[0] || !data[0].translations || !data[0].translations[0]) {
-      throw new Error("Unexpected response format");
-    }
-
-    return data[0].translations[0].text;
   }
 
   const cache = new Map();
@@ -123,8 +125,13 @@
 
     const eng = engine || "google";
     const key = `${eng}:${sl}:${tl}:${text.substring(0, 200)}`;
+
     const cached = cache.get(key);
-    if (cached) return cached;
+    if (cached) {
+      cache.delete(key);
+      cache.set(key, cached);
+      return cached;
+    }
 
     let result;
 
@@ -136,10 +143,23 @@
         result = await translateGoogle(text, sl, tl);
     }
 
-    if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);
     cache.set(key, result);
+    if (cache.size > CACHE_MAX) {
+      const first = cache.keys().next().value;
+      if (first !== undefined) cache.delete(first);
+    }
     return result;
   }
+
+  const LANG_CODES = [
+    "auto", "zh-CN", "zh-TW", "en", "ja", "ko", "fr", "de", "es",
+    "pt", "ru", "ar", "th", "vi", "id", "it", "nl", "pl", "tr", "hi",
+  ];
+
+  const ENGINES = [
+    { id: "google", name: "Google" },
+    { id: "bing", name: "Bing" },
+  ];
 
   const BROWSER_LANG_MAP = {
     "zh": "zh-CN", "zh-cn": "zh-CN", "zh-tw": "zh-TW", "zh-hk": "zh-TW",
@@ -159,33 +179,15 @@
     return BROWSER_LANG_MAP[prefix] || "en";
   }
 
-  const LANGS = [
-    { code: "auto", name: "Detect Language" },
-    { code: "zh-CN", name: "Chinese (Simplified)" },
-    { code: "zh-TW", name: "Chinese (Traditional)" },
-    { code: "en", name: "English" },
-    { code: "ja", name: "Japanese" },
-    { code: "ko", name: "Korean" },
-    { code: "fr", name: "French" },
-    { code: "de", name: "German" },
-    { code: "es", name: "Spanish" },
-    { code: "pt", name: "Portuguese" },
-    { code: "ru", name: "Russian" },
-    { code: "ar", name: "Arabic" },
-    { code: "th", name: "Thai" },
-    { code: "vi", name: "Vietnamese" },
-    { code: "id", name: "Indonesian" },
-    { code: "it", name: "Italian" },
-    { code: "nl", name: "Dutch" },
-    { code: "pl", name: "Polish" },
-    { code: "tr", name: "Turkish" },
-    { code: "hi", name: "Hindi" },
-  ];
+  const EN_LANG_NAMES = {
+    auto: "Detect Language", "zh-CN": "Chinese (Simplified)", "zh-TW": "Chinese (Traditional)",
+    en: "English", ja: "Japanese", ko: "Korean", fr: "French", de: "German",
+    es: "Spanish", pt: "Portuguese", ru: "Russian", ar: "Arabic", th: "Thai",
+    vi: "Vietnamese", id: "Indonesian", it: "Italian", nl: "Dutch", pl: "Polish",
+    tr: "Turkish", hi: "Hindi",
+  };
 
-  const ENGINES = [
-    { id: "google", name: "Google" },
-    { id: "bing", name: "Bing" },
-  ];
+  const LANGS = LANG_CODES.map((code) => ({ code, name: EN_LANG_NAMES[code] || code }));
 
   const DEF = {
     selTL: getBrowserLang(),
@@ -413,39 +415,27 @@
     }
 
     if (req.action === "getSiteRule") {
-      (async () => {
-        const rules = await getSiteRules();
+      getSiteRules().then((rules) => {
         const url = req.url || sender.tab?.url || "";
-        const rule = matchRule(rules, url);
-        respond({ rule });
-      })();
+        respond({ rule: matchRule(rules, url) });
+      });
       return true;
     }
 
     if (req.action === "getAllRules") {
-      (async () => {
-        const rules = await getSiteRules();
-        respond({ rules });
-      })();
+      getSiteRules().then((rules) => respond({ rules }));
       return true;
     }
 
     if (req.action === "refreshRules") {
-      (async () => {
-        resetRulesCache();
-        const rules = await fetchRemoteRules();
-        respond({ rules: rules || [] });
-      })();
+      resetRulesCache();
+      fetchRemoteRules().then((rules) => respond({ rules: rules || [] }));
       return true;
     }
 
     if (req.action === "updateRules") {
-      (async () => {
-        const rules = req.rules;
-        if (!Array.isArray(rules)) { respond({ success: false }); return; }
-        await saveRemoteRules(rules, null);
-        respond({ success: true });
-      })();
+      if (!Array.isArray(req.rules)) { respond({ success: false }); return false; }
+      saveRemoteRules(req.rules, null).then(() => respond({ success: true }));
       return true;
     }
 

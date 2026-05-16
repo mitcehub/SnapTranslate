@@ -1,25 +1,17 @@
-export const LANGS = [
-  { c: "auto", n: "Detect" },
-  { c: "zh-CN", n: "中文(简体)" },
-  { c: "zh-TW", n: "中文(繁体)" },
-  { c: "en", n: "English" },
-  { c: "ja", n: "日本語" },
-  { c: "ko", n: "한국어" },
-  { c: "fr", n: "Français" },
-  { c: "de", n: "Deutsch" },
-  { c: "es", n: "Español" },
-  { c: "pt", n: "Português" },
-  { c: "ru", n: "Русский" },
-  { c: "ar", n: "العربية" },
-  { c: "th", n: "ไทย" },
-  { c: "vi", n: "Tiếng Việt" },
-  { c: "id", n: "Indonesia" },
-  { c: "it", n: "Italiano" },
-  { c: "nl", n: "Nederlands" },
-  { c: "pl", n: "Polski" },
-  { c: "tr", n: "Türkçe" },
-  { c: "hi", n: "हिन्दी" },
+export const LANG_CODES = [
+  "auto", "zh-CN", "zh-TW", "en", "ja", "ko", "fr", "de", "es",
+  "pt", "ru", "ar", "th", "vi", "id", "it", "nl", "pl", "tr", "hi",
 ];
+
+const LANG_NAMES = {
+  auto: "Detect", "zh-CN": "中文(简体)", "zh-TW": "中文(繁体)",
+  en: "English", ja: "日本語", ko: "한국어", fr: "Français",
+  de: "Deutsch", es: "Español", pt: "Português", ru: "Русский",
+  ar: "العربية", th: "ไทย", vi: "Tiếng Việt", id: "Indonesia",
+  it: "Italiano", nl: "Nederlands", pl: "Polski", tr: "Türkçe", hi: "हिन्दी",
+};
+
+export const LANGS = LANG_CODES.map((code) => ({ code, name: LANG_NAMES[code] }));
 
 export const ENGINES = [
   { id: "google", name: "Google" },
@@ -75,7 +67,7 @@ export function getBrowserLang() {
 
 export function detectTextLang(text) {
   if (/[\u4e00-\u9fff]/.test(text)) {
-    if (/[\u4e00-\u9fff]/.test(text) && !/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "zh-CN";
+    if (!/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "zh-CN";
   }
   if (/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "ja";
   if (/[\uac00-\ud7af]/.test(text)) return "ko";

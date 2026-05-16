@@ -1,32 +1,15 @@
-import { BROWSER_LANG_MAP, getBrowserLang } from '../shared/constants.js';
+import { LANG_CODES, ENGINES, getBrowserLang } from '../shared/constants.js';
 
-export const LANGS = [
-  { code: "auto", name: "Detect Language" },
-  { code: "zh-CN", name: "Chinese (Simplified)" },
-  { code: "zh-TW", name: "Chinese (Traditional)" },
-  { code: "en", name: "English" },
-  { code: "ja", name: "Japanese" },
-  { code: "ko", name: "Korean" },
-  { code: "fr", name: "French" },
-  { code: "de", name: "German" },
-  { code: "es", name: "Spanish" },
-  { code: "pt", name: "Portuguese" },
-  { code: "ru", name: "Russian" },
-  { code: "ar", name: "Arabic" },
-  { code: "th", name: "Thai" },
-  { code: "vi", name: "Vietnamese" },
-  { code: "id", name: "Indonesian" },
-  { code: "it", name: "Italian" },
-  { code: "nl", name: "Dutch" },
-  { code: "pl", name: "Polish" },
-  { code: "tr", name: "Turkish" },
-  { code: "hi", name: "Hindi" },
-];
+const EN_LANG_NAMES = {
+  auto: "Detect Language", "zh-CN": "Chinese (Simplified)", "zh-TW": "Chinese (Traditional)",
+  en: "English", ja: "Japanese", ko: "Korean", fr: "French", de: "German",
+  es: "Spanish", pt: "Portuguese", ru: "Russian", ar: "Arabic", th: "Thai",
+  vi: "Vietnamese", id: "Indonesian", it: "Italian", nl: "Dutch", pl: "Polish",
+  tr: "Turkish", hi: "Hindi",
+};
 
-export const ENGINES = [
-  { id: "google", name: "Google" },
-  { id: "bing", name: "Bing" },
-];
+export const LANGS = LANG_CODES.map((code) => ({ code, name: EN_LANG_NAMES[code] || code }));
+export { ENGINES };
 
 const DEF = {
   selTL: getBrowserLang(),

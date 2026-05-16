@@ -48,50 +48,52 @@ function clearBingConfig() {
   bingConfig = null;
 }
 
-export async function translateBing(text, sl, tl, _retry) {
-  const config = await getBingConfig();
-  const bsl = bingLang(sl);
-  const btl = bingLang(tl);
+export async function translateBing(text, sl, tl) {
+  let lastError;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const config = await getBingConfig();
+      const bsl = bingLang(sl);
+      const btl = bingLang(tl);
 
-  const body = new URLSearchParams({
-    fromLang: bsl,
-    text: text,
-    token: config.token,
-    key: config.key,
-    to: btl,
-  });
+      const body = new URLSearchParams({
+        fromLang: bsl,
+        text: text,
+        token: config.token,
+        key: config.key,
+        to: btl,
+      });
 
-  const url = `https://www.bing.com/ttranslatev3?isVertical=1&IG=${config.ig}&IID=${config.iid}.1`;
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      "Referer": "https://www.bing.com/translator",
-    },
-    body: body.toString(),
-  });
+      const url = `https://www.bing.com/ttranslatev3?isVertical=1&IG=${config.ig}&IID=${config.iid}.1`;
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Referer": "https://www.bing.com/translator",
+        },
+        body: body.toString(),
+      });
 
-  if (!resp.ok) {
-    if (!_retry) {
-      clearBingConfig();
-      return translateBing(text, sl, tl, true);
+      if (!resp.ok) {
+        if (attempt === 0) { clearBingConfig(); continue; }
+        throw new Error(`HTTP ${resp.status}`);
+      }
+
+      const data = await resp.json();
+
+      if (data.ShowCaptcha || data.StatusCode === 401) {
+        if (attempt === 0) { clearBingConfig(); continue; }
+        throw new Error(data.ShowCaptcha ? "Captcha required" : "Unauthorized");
+      }
+
+      if (!data || !data[0] || !data[0].translations || !data[0].translations[0]) {
+        throw new Error("Unexpected response format");
+      }
+
+      return data[0].translations[0].text;
+    } catch (e) {
+      lastError = e;
+      if (attempt === 1) throw lastError;
     }
-    throw new Error(`HTTP ${resp.status}`);
   }
-
-  const data = await resp.json();
-
-  if (data.ShowCaptcha || data.StatusCode === 401) {
-    if (!_retry) {
-      clearBingConfig();
-      return translateBing(text, sl, tl, true);
-    }
-    throw new Error(data.ShowCaptcha ? "Captcha required" : "Unauthorized");
-  }
-
-  if (!data || !data[0] || !data[0].translations || !data[0].translations[0]) {
-    throw new Error("Unexpected response format");
-  }
-
-  return data[0].translations[0].text;
 }
