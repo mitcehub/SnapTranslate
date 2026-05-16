@@ -116,8 +116,16 @@
     }
   }
 
+  const REGISTRY = new Map();
   const cache = new Map();
   const CACHE_MAX = 500;
+
+  function registerEngine(name, translateFn) {
+    REGISTRY.set(name, translateFn);
+  }
+
+  registerEngine("google", translateGoogle);
+  registerEngine("bing", translateBing);
 
   async function translate(text, sl, tl, engine) {
     if (!text || !text.trim()) return "";
@@ -133,15 +141,10 @@
       return cached;
     }
 
-    let result;
+    const fn = REGISTRY.get(eng);
+    if (!fn) throw new Error(`Unknown translation engine: ${eng}`);
 
-    switch (eng) {
-      case "bing":
-        result = await translateBing(text, sl, tl);
-        break;
-      default:
-        result = await translateGoogle(text, sl, tl);
-    }
+    const result = await fn(text, sl, tl);
 
     cache.set(key, result);
     if (cache.size > CACHE_MAX) {

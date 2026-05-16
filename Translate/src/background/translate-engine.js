@@ -1,8 +1,16 @@
 import { translateGoogle } from './translate-google.js';
 import { translateBing } from './translate-bing.js';
 
+const REGISTRY = new Map();
 const cache = new Map();
 const CACHE_MAX = 500;
+
+export function registerEngine(name, translateFn) {
+  REGISTRY.set(name, translateFn);
+}
+
+registerEngine("google", translateGoogle);
+registerEngine("bing", translateBing);
 
 export async function translate(text, sl, tl, engine) {
   if (!text || !text.trim()) return "";
@@ -18,15 +26,10 @@ export async function translate(text, sl, tl, engine) {
     return cached;
   }
 
-  let result;
+  const fn = REGISTRY.get(eng);
+  if (!fn) throw new Error(`Unknown translation engine: ${eng}`);
 
-  switch (eng) {
-    case "bing":
-      result = await translateBing(text, sl, tl);
-      break;
-    default:
-      result = await translateGoogle(text, sl, tl);
-  }
+  const result = await fn(text, sl, tl);
 
   cache.set(key, result);
   if (cache.size > CACHE_MAX) {
