@@ -18,9 +18,9 @@ A lightweight browser translation extension — select text on any page and tran
 
 Install [Tampermonkey](https://www.tampermonkey.net/) first, then open the link below:
 
-[**Install EZ-Translate Userscript**](userscript/dist/ez-translate.user.js)
+[**Install EZ-Translate Userscript**](https://raw.githubusercontent.com/mitcehub/EZ-Translate/main/userscript/dist/ez-translate.user.js)
 
-Or browse to `userscript/dist/ez-translate.user.js` and click "Raw" → "Install".
+Click the link above and Tampermonkey will prompt you to install.
 
 ### Chrome Extension
 

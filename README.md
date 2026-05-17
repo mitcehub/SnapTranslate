@@ -20,9 +20,9 @@
 
 安装 Tampermonkey 后打开下方链接即可安装：
 
-[**安装 EZ-Translate 油猴版**](userscript/dist/ez-translate.user.js)
+[**安装 EZ-Translate 油猴版**](https://raw.githubusercontent.com/mitcehub/EZ-Translate/main/userscript/dist/ez-translate.user.js)
 
-或者在 `userscript/dist/ez-translate.user.js` 右键 "Raw" → "Install"。
+点击上方链接，Tampermonkey 会自动弹出安装页面。
 
 ### Chrome 扩展
 
