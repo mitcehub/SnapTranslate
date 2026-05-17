@@ -11,8 +11,5 @@
     "@rollup/plugin-node-resolve": "^15.0.0",
     "rollup": "^4.0.0"
   },
-  "dependencies": {
-    "javascript-obfuscator": "^5.4.2",
-    "webcrack": "^2.16.0"
-  }
+  "dependencies": {}
 }
