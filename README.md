@@ -1,4 +1,4 @@
-# EZ-Translate — EZ-翻译
+# EZ-Translate
 
 轻量级浏览器翻译扩展 — 选中文字即可即时翻译。
 
