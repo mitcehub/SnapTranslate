@@ -9272,7 +9272,7 @@ function matchRule(rules, url) {
       for (const p of patterns) {
         const pattern = p.trim();
         if (!pattern) continue;
-        if (matchHostname(hostname, pattern)) return rule;
+        if (matchHostnameOrUrl(url, pattern)) return rule;
       }
     }
   } catch {}
@@ -10938,6 +10938,10 @@ async function init() {
     } catch { }
   }
 
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refreshSettings();
+  });
+
   ready = true;
 }
 
@@ -11357,6 +11361,7 @@ async function initSettingsPanel(panel) {
     };
     saveSettings(ns);
     settings = ns;
+    if (typeof refreshSettings !== 'undefined') refreshSettings();
   }
 
   for (const id of ["ez-selTL", "ez-inputTL", "ez-pgTL", "ez-selEngine", "ez-inputEngine", "ez-pgEngine"]) {
@@ -11402,17 +11407,21 @@ async function showOptionsPanel() {
     settingsWindow.focus();
     return;
   }
-  const w = window.open('about:blank', 'ez-settings', 'width=640,height=720,resizable=yes,scrollbars=yes');
+  const w = window.open('about:blank', 'ez-settings');
   if (!w) {
     console.warn('EZ-Translate: 请允许弹出窗口以打开设置');
     return;
   }
   const d = w.document;
   d.write('<!DOCTYPE html><html><head><title>EZ-Translate ' + t('optionsTitle') + '</title><meta charset="utf-8">');
-  d.write('<style>body{margin:0;padding:16px;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;color:#111827;}.ez-dark body{background:#1e1e2e;color:#cdd6f4;}</style>');
+  d.write('<style>body{margin:0;padding:16px;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;color:#111827;}body.ez-dark{background:#1e1e2e;color:#cdd6f4;}</style>');
   d.write('</head><body></body></html>');
   d.close();
   settingsWindow = w;
+
+  const isDark = document.documentElement.getAttribute("data-tr-theme") === "dark";
+  if (isDark) d.body.classList.add("ez-dark");
+
   const panel = d.createElement('div');
   d.body.appendChild(panel);
   try {

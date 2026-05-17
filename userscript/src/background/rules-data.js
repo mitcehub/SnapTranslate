@@ -192,7 +192,7 @@ function matchRule(rules, url) {
       for (const p of patterns) {
         const pattern = p.trim();
         if (!pattern) continue;
-        if (matchHostname(hostname, pattern)) return rule;
+        if (matchHostnameOrUrl(url, pattern)) return rule;
       }
     }
   } catch {}

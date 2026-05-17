@@ -413,5 +413,9 @@ async function init() {
     } catch { }
   }
 
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refreshSettings();
+  });
+
   ready = true;
 }

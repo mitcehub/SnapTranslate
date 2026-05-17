@@ -290,6 +290,7 @@ async function initSettingsPanel(panel) {
     };
     saveSettings(ns);
     settings = ns;
+    if (typeof refreshSettings !== 'undefined') refreshSettings();
   }
 
   for (const id of ["ez-selTL", "ez-inputTL", "ez-pgTL", "ez-selEngine", "ez-inputEngine", "ez-pgEngine"]) {
