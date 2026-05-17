@@ -301,6 +301,7 @@
     inputEngine: "google",
     pgEngine: "google",
     blacklist: [],
+    autoBlacklist: [],
     rulesUrl: "",
     allowRemoteTTS: false,
   };
@@ -9045,6 +9046,28 @@
           s.blacklist.push(req.host);
           await chrome.storage.local.set({ settings: s });
         }
+        respond({ success: true });
+      });
+      return true;
+    }
+
+    if (req.action === "addAutoBlacklist") {
+      getSettings().then(async (s) => {
+        if (!s.autoBlacklist) s.autoBlacklist = [];
+        if (!s.autoBlacklist.includes(req.host)) {
+          s.autoBlacklist.push(req.host);
+          await chrome.storage.local.set({ settings: s });
+        }
+        respond({ success: true });
+      });
+      return true;
+    }
+
+    if (req.action === "removeAutoBlacklist") {
+      getSettings().then(async (s) => {
+        if (!s.autoBlacklist) s.autoBlacklist = [];
+        s.autoBlacklist = s.autoBlacklist.filter((h) => h !== req.host);
+        await chrome.storage.local.set({ settings: s });
         respond({ success: true });
       });
       return true;

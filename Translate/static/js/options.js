@@ -54,6 +54,8 @@
       blacklistTitle: "Page Translation Blacklist",
       blacklistDesc: "Sites in this list will not be auto-translated. Selection translation still works.",
       blacklistPlaceholder: "e.g. example.com or *.example.com",
+      autoBlacklistTitle: "Auto-Translate Blacklist",
+      autoBlacklistDesc: "Sites in this list will not auto-translate, but manual translation still works.",
       addBtn: "Add",
       emptyBlacklist: "No sites in blacklist",
       tabGeneral: "General",
@@ -100,6 +102,8 @@
       blacklistTitle: "网页翻译黑名单",
       blacklistDesc: "黑名单中的网站不会自动翻译整页，划词翻译仍可正常使用",
       blacklistPlaceholder: "例如 example.com 或 *.example.com",
+      autoBlacklistTitle: "自动翻译黑名单",
+      autoBlacklistDesc: "此列表中的网站不会自动翻译，但手动翻译仍可正常使用",
       addBtn: "添加",
       emptyBlacklist: "暂无黑名单网站",
       tabGeneral: "通用",
@@ -146,6 +150,8 @@
       blacklistTitle: "ページ翻訳ブラックリスト",
       blacklistDesc: "ブラックリストのサイトはページ翻訳されません。選択翻訳は引き続き使用できます",
       blacklistPlaceholder: "例: example.com または *.example.com",
+      autoBlacklistTitle: "自動翻訳ブラックリスト",
+      autoBlacklistDesc: "このリストのサイトは自動翻訳されませんが、手動翻訳は引き続き使用できます",
       addBtn: "追加",
       emptyBlacklist: "ブラックリストにサイトがありません",
       tabGeneral: "一般",
@@ -192,6 +198,8 @@
       blacklistTitle: "페이지 번역 블랙리스트",
       blacklistDesc: "블랙리스트의 사이트는 페이지 번역이 제한됩니다. 선택 번역은 계속 사용 가능합니다",
       blacklistPlaceholder: "예: example.com 또는 *.example.com",
+      autoBlacklistTitle: "자동 번역 블랙리스트",
+      autoBlacklistDesc: "이 목록의 사이트는 자동 번역되지 않지만 수동 번역은 계속 사용 가능합니다",
       addBtn: "추가",
       emptyBlacklist: "블랙리스트에 사이트가 없습니다",
       tabGeneral: "일반",
@@ -388,6 +396,33 @@
     });
   }
 
+  function renderAutoBlacklist(autoBlacklist, saveFn) {
+    const container = document.getElementById("autoBlacklistContainer");
+    if (!container) return;
+    container.innerHTML = "";
+    if (!autoBlacklist || !autoBlacklist.length) {
+      const empty = document.createElement("div");
+      empty.className = "blacklist-empty";
+      empty.textContent = "No sites in blacklist";
+      empty.style.cssText = "color:#9ca3af;font-size:12px;padding:8px 0;";
+      container.appendChild(empty);
+      return;
+    }
+    const list = document.createElement("div");
+    list.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
+    autoBlacklist.forEach((host) => {
+      const chip = document.createElement("div");
+      chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid #e2e8f0;border-radius:14px;font-size:11px;color:#475569;background:#f8fafc;";
+      chip.innerHTML = `<span>${escHtml(host)}</span><button class="remove" style="border:none;background:none;color:#6b7280;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;">&times;</button>`;
+      chip.querySelector(".remove").addEventListener("click", () => {
+        const updated = autoBlacklist.filter((h) => h !== host);
+        saveFn(updated);
+      });
+      list.appendChild(chip);
+    });
+    container.appendChild(list);
+  }
+
   async function initSettingsUI() {
     applyI18N();
 
@@ -426,7 +461,12 @@
     };
     renderBlacklist(settings.blacklist || [], onBlacklistChange);
 
-    // 规则标签展示已禁用
+    const onAutoBlacklistChange = (newBL) => {
+      settings.autoBlacklist = newBL;
+      save();
+      renderAutoBlacklist(newBL, onAutoBlacklistChange);
+    };
+    renderAutoBlacklist(settings.autoBlacklist || [], onAutoBlacklistChange);
 
     function save() {
       const newSettings = {
@@ -443,6 +483,7 @@
         autoTranslate: document.getElementById("autoTranslate")?.checked ?? false,
         ignLangs: settings.ignLangs || [],
         blacklist: settings.blacklist || [],
+        autoBlacklist: settings.autoBlacklist || [],
         rulesUrl: document.getElementById("rulesUrl")?.value || "",
       };
       chrome.runtime.sendMessage({ action: "saveSettings", settings: newSettings });
@@ -482,6 +523,26 @@
       };
       addBlacklistBtn.addEventListener("click", addHost);
       blacklistInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") addHost();
+      });
+    }
+
+    const addAutoBLBtn = document.getElementById("addAutoBlacklistBtn");
+    const autoBLInput = document.getElementById("autoBlacklistInput");
+    if (addAutoBLBtn && autoBLInput) {
+      const addHost = () => {
+        const host = autoBLInput.value.trim();
+        if (!host) return;
+        if (!settings.autoBlacklist) settings.autoBlacklist = [];
+        if (!settings.autoBlacklist.includes(host)) {
+          settings.autoBlacklist.push(host);
+          save();
+          renderAutoBlacklist(settings.autoBlacklist, onAutoBlacklistChange);
+        }
+        autoBLInput.value = "";
+      };
+      addAutoBLBtn.addEventListener("click", addHost);
+      autoBLInput.addEventListener("keydown", (e) => {
         if (e.key === "Enter") addHost();
       });
     }

@@ -35,10 +35,11 @@ let S = {
   selTL: "en", inputSL: "auto", inputTL: "en", pgTL: "en",
   enSel: true, enInput: true, enPage: true, enFloat: true, autoTranslate: true,
   ignLangs: [], selEngine: "google", inputEngine: "google", pgEngine: "google",
-  blacklist: [], rulesUrl: ""
+  blacklist: [], autoBlacklist: [], rulesUrl: ""
 };
 let ready = false;
 let isBlacklisted = false;
+let isAutoBlacklisted = false;
 let sessionDisabled = false;
 let pgTranslating = false;
 let siteRule = null;
@@ -93,14 +94,14 @@ async function handleSpaNavigation() {
     const resp = await sendMessage({ action: "getSiteRule", url: location.href });
     if (resp?.rule) {
       siteRule = resp.rule;
-      if (S.autoTranslate && siteRule.autoTranslate) {
+      if (S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
         pgTranslating = true;
         const st = await showTransStatus(`匹配规则: ${siteRule.name}，自动翻译`);
         await applyPageRule(siteRule, "auto", S.pgTL || S.selTL, S.pgEngine || "google");
         clearTransStatus(st);
         if (pgTranslating && float) float.classList.add("tr-translated");
       }
-    } else if (S.autoTranslate) {
+    } else if (S.autoTranslate && !isAutoBlacklisted) {
       siteRule = GENERIC_RULE;
       const st = await showTransStatus("未匹配到规则，使用通用规则", true);
       await applyPageRule(GENERIC_RULE, "auto", S.pgTL || S.selTL, S.pgEngine || "google");
@@ -164,6 +165,7 @@ function showDisableMenu() {
   const items = [
     { icon: svgIcon("eyeOff"), label: "下次打开", desc: "关闭本次，下次访问时重新显示", action: () => { removeFloat(); closeFloatMenu(); } },
     { icon: svgIcon("clock"), label: "临时禁用", desc: "本次会话中不再显示", action: () => { try { sessionStorage.setItem(LS_PREFIX + "tr-float-disabled", "1"); } catch { } removeFloat(); closeFloatMenu(); showToast("已临时禁用"); } },
+    { icon: svgIcon("autoOff"), label: "禁用自动翻译", desc: "此网站不自动翻译，可手动点击翻译", action: async () => { const host = location.hostname; if (isAutoBlacklisted) { try { await sendMessage({ action: "removeAutoBlacklist", host }); } catch { } isAutoBlacklisted = false; showToast("已启用自动翻译"); } else { try { await sendMessage({ action: "addAutoBlacklist", host }); } catch { } isAutoBlacklisted = true; if (pgTranslating) revertPageTranslation(); showToast("已禁用自动翻译"); } closeFloatMenu(); } },
     { icon: svgIcon("ban"), label: "永久禁用此网站", desc: "将此网站加入网页翻译黑名单", cls: "danger", action: async () => { const host = location.hostname; try { await sendMessage({ action: "addBlacklist", host }); } catch { } revertPageTranslation(); removeFloat(); closeFloatMenu(); showToast("已加入网页翻译黑名单"); } },
   ];
   items.forEach((it) => {
@@ -377,6 +379,10 @@ async function init() {
     if (r && r.blacklisted) isBlacklisted = true;
   } catch { }
 
+  if (S.autoBlacklist?.length) {
+    isAutoBlacklisted = checkBlacklist(location.hostname, S.autoBlacklist);
+  }
+
   try {
     if (sessionStorage.getItem(LS_PREFIX + "tr-float-disabled") === "1") sessionDisabled = true;
   } catch { }
@@ -401,14 +407,14 @@ async function init() {
       const resp = await sendMessage({ action: "getSiteRule", url: location.href });
       if (resp?.rule) {
         siteRule = resp.rule;
-        if (S.autoTranslate && siteRule.autoTranslate) {
+        if (S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
           pgTranslating = true;
           const st = await showTransStatus(`匹配规则: ${siteRule.name}，自动翻译`);
           await applyPageRule(siteRule, "auto", S.pgTL || S.selTL, S.pgEngine || "google");
           clearTransStatus(st);
           if (pgTranslating && float) float.classList.add("tr-translated");
         }
-      } else if (S.autoTranslate) {
+      } else if (S.autoTranslate && !isAutoBlacklisted) {
         siteRule = GENERIC_RULE;
         const st = await showTransStatus("未匹配到规则，使用通用规则");
         await applyPageRule(GENERIC_RULE, "auto", S.pgTL || S.selTL, S.pgEngine || "google");
@@ -467,6 +473,7 @@ async function init() {
         sessionDisabled = false;
         try { sessionStorage.removeItem(LS_PREFIX + "tr-float-disabled"); } catch { }
       }
+      isAutoBlacklisted = checkBlacklist(location.hostname, S.autoBlacklist || []);
       if (S.enFloat && !isBlacklisted && !sessionDisabled) createFloat();
       else removeFloat();
     }

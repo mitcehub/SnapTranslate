@@ -151,6 +151,33 @@ function testEngine(btnId, engineId) {
   });
 }
 
+function renderAutoBlacklist(autoBlacklist, saveFn) {
+  const container = document.getElementById("autoBlacklistContainer");
+  if (!container) return;
+  container.innerHTML = "";
+  if (!autoBlacklist || !autoBlacklist.length) {
+    const empty = document.createElement("div");
+    empty.className = "blacklist-empty";
+    empty.textContent = "No sites in blacklist";
+    empty.style.cssText = "color:#9ca3af;font-size:12px;padding:8px 0;";
+    container.appendChild(empty);
+    return;
+  }
+  const list = document.createElement("div");
+  list.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
+  autoBlacklist.forEach((host) => {
+    const chip = document.createElement("div");
+    chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid #e2e8f0;border-radius:14px;font-size:11px;color:#475569;background:#f8fafc;";
+    chip.innerHTML = `<span>${escHtml(host)}</span><button class="remove" style="border:none;background:none;color:#6b7280;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;">&times;</button>`;
+    chip.querySelector(".remove").addEventListener("click", () => {
+      const updated = autoBlacklist.filter((h) => h !== host);
+      saveFn(updated);
+    });
+    list.appendChild(chip);
+  });
+  container.appendChild(list);
+}
+
 export async function initSettingsUI() {
   applyI18N();
 
@@ -189,7 +216,12 @@ export async function initSettingsUI() {
   };
   renderBlacklist(settings.blacklist || [], onBlacklistChange);
 
-  // 规则标签展示已禁用
+  const onAutoBlacklistChange = (newBL) => {
+    settings.autoBlacklist = newBL;
+    save();
+    renderAutoBlacklist(newBL, onAutoBlacklistChange);
+  };
+  renderAutoBlacklist(settings.autoBlacklist || [], onAutoBlacklistChange);
 
   function save() {
     const newSettings = {
@@ -206,6 +238,7 @@ export async function initSettingsUI() {
       autoTranslate: document.getElementById("autoTranslate")?.checked ?? false,
       ignLangs: settings.ignLangs || [],
       blacklist: settings.blacklist || [],
+      autoBlacklist: settings.autoBlacklist || [],
       rulesUrl: document.getElementById("rulesUrl")?.value || "",
     };
     chrome.runtime.sendMessage({ action: "saveSettings", settings: newSettings });
@@ -245,6 +278,26 @@ export async function initSettingsUI() {
     };
     addBlacklistBtn.addEventListener("click", addHost);
     blacklistInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") addHost();
+    });
+  }
+
+  const addAutoBLBtn = document.getElementById("addAutoBlacklistBtn");
+  const autoBLInput = document.getElementById("autoBlacklistInput");
+  if (addAutoBLBtn && autoBLInput) {
+    const addHost = () => {
+      const host = autoBLInput.value.trim();
+      if (!host) return;
+      if (!settings.autoBlacklist) settings.autoBlacklist = [];
+      if (!settings.autoBlacklist.includes(host)) {
+        settings.autoBlacklist.push(host);
+        save();
+        renderAutoBlacklist(settings.autoBlacklist, onAutoBlacklistChange);
+      }
+      autoBLInput.value = "";
+    };
+    addAutoBLBtn.addEventListener("click", addHost);
+    autoBLInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") addHost();
     });
   }

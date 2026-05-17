@@ -95,6 +95,7 @@
     eyeOff: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>',
     clock: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
     powerOff: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 11-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>',
+    autoOff: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/><polygon points="10,8 10,16 16,12"/></svg>',
     volume: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg>',
   };
 
@@ -1290,10 +1291,11 @@
     selTL: "en", inputSL: "auto", inputTL: "en", pgTL: "en",
     enSel: true, enInput: true, enPage: true, enFloat: true, autoTranslate: true,
     ignLangs: [], selEngine: "google", inputEngine: "google", pgEngine: "google",
-    blacklist: [], rulesUrl: ""
+    blacklist: [], autoBlacklist: [], rulesUrl: ""
   };
   let ready = false;
   let isBlacklisted = false;
+  let isAutoBlacklisted = false;
   let sessionDisabled = false;
   let pgTranslating = false;
   let siteRule = null;
@@ -1348,14 +1350,14 @@
       const resp = await sendMessage({ action: "getSiteRule", url: location.href });
       if (resp?.rule) {
         siteRule = resp.rule;
-        if (S.autoTranslate && siteRule.autoTranslate) {
+        if (S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
           pgTranslating = true;
           const st = await showTransStatus(`匹配规则: ${siteRule.name}，自动翻译`);
           await applyPageRule(siteRule, "auto", S.pgTL || S.selTL, S.pgEngine || "google");
           clearTransStatus(st);
           if (pgTranslating && float) float.classList.add("tr-translated");
         }
-      } else if (S.autoTranslate) {
+      } else if (S.autoTranslate && !isAutoBlacklisted) {
         siteRule = GENERIC_RULE;
         const st = await showTransStatus("未匹配到规则，使用通用规则", true);
         await applyPageRule(GENERIC_RULE, "auto", S.pgTL || S.selTL, S.pgEngine || "google");
@@ -1419,6 +1421,7 @@
     const items = [
       { icon: svgIcon("eyeOff"), label: "下次打开", desc: "关闭本次，下次访问时重新显示", action: () => { removeFloat(); closeFloatMenu(); } },
       { icon: svgIcon("clock"), label: "临时禁用", desc: "本次会话中不再显示", action: () => { try { sessionStorage.setItem(LS_PREFIX + "tr-float-disabled", "1"); } catch { } removeFloat(); closeFloatMenu(); showToast("已临时禁用"); } },
+      { icon: svgIcon("autoOff"), label: "禁用自动翻译", desc: "此网站不自动翻译，可手动点击翻译", action: async () => { const host = location.hostname; if (isAutoBlacklisted) { try { await sendMessage({ action: "removeAutoBlacklist", host }); } catch { } isAutoBlacklisted = false; showToast("已启用自动翻译"); } else { try { await sendMessage({ action: "addAutoBlacklist", host }); } catch { } isAutoBlacklisted = true; if (pgTranslating) revertPageTranslation(); showToast("已禁用自动翻译"); } closeFloatMenu(); } },
       { icon: svgIcon("ban"), label: "永久禁用此网站", desc: "将此网站加入网页翻译黑名单", cls: "danger", action: async () => { const host = location.hostname; try { await sendMessage({ action: "addBlacklist", host }); } catch { } revertPageTranslation(); removeFloat(); closeFloatMenu(); showToast("已加入网页翻译黑名单"); } },
     ];
     items.forEach((it) => {
@@ -1632,6 +1635,10 @@
       if (r && r.blacklisted) isBlacklisted = true;
     } catch { }
 
+    if (S.autoBlacklist?.length) {
+      isAutoBlacklisted = isBlacklisted$1(location.hostname, S.autoBlacklist);
+    }
+
     try {
       if (sessionStorage.getItem(LS_PREFIX + "tr-float-disabled") === "1") sessionDisabled = true;
     } catch { }
@@ -1656,14 +1663,14 @@
         const resp = await sendMessage({ action: "getSiteRule", url: location.href });
         if (resp?.rule) {
           siteRule = resp.rule;
-          if (S.autoTranslate && siteRule.autoTranslate) {
+          if (S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
             pgTranslating = true;
             const st = await showTransStatus(`匹配规则: ${siteRule.name}，自动翻译`);
             await applyPageRule(siteRule, "auto", S.pgTL || S.selTL, S.pgEngine || "google");
             clearTransStatus(st);
             if (pgTranslating && float) float.classList.add("tr-translated");
           }
-        } else if (S.autoTranslate) {
+        } else if (S.autoTranslate && !isAutoBlacklisted) {
           siteRule = GENERIC_RULE;
           const st = await showTransStatus("未匹配到规则，使用通用规则");
           await applyPageRule(GENERIC_RULE, "auto", S.pgTL || S.selTL, S.pgEngine || "google");
@@ -1722,6 +1729,7 @@
           sessionDisabled = false;
           try { sessionStorage.removeItem(LS_PREFIX + "tr-float-disabled"); } catch { }
         }
+        isAutoBlacklisted = isBlacklisted$1(location.hostname, S.autoBlacklist || []);
         if (S.enFloat && !isBlacklisted && !sessionDisabled) createFloat();
         else removeFloat();
       }

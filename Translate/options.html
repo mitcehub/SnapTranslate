@@ -194,6 +194,24 @@
       <div class="section">
         <div class="section-title">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+            <polygon points="10,8 10,16 16,12"/>
+          </svg>
+          <span data-i18n="autoBlacklistTitle">Auto-Translate Blacklist</span>
+        </div>
+        <div class="row">
+          <div class="row-label"><span data-i18n="autoBlacklistDesc">Sites in this list will not auto-translate, but manual translation still works</span></div>
+        </div>
+        <div class="blacklist-container" id="autoBlacklistContainer"></div>
+        <div class="row blacklist-add">
+          <input type="text" id="autoBlacklistInput" placeholder="e.g. example.com or *.example.com" data-i18n-placeholder="blacklistPlaceholder">
+          <button class="add-btn" id="addAutoBlacklistBtn" data-i18n="addBtn">Add</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
             <polyline points="7 10 12 15 17 10"/>
             <line x1="12" y1="15" x2="12" y2="3"/>
