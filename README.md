@@ -3,6 +3,8 @@
 轻量级浏览器翻译扩展 — 选中文字即可即时翻译。
 
 > **注意：** 本扩展未发布到 Chrome Web Store 或 Edge 扩展商店，需要手动加载已解压的扩展。
+>
+> [English README](README.en.md)
 
 ## 功能
 
