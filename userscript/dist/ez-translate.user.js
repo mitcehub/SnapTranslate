@@ -11066,9 +11066,10 @@ function t(key) {
 
 // ===== options/settings-ui.js =====
 function populateSelect(sel, options, selected) {
+  const doc = sel.ownerDocument || document;
   sel.innerHTML = "";
   options.forEach((l) => {
-    const opt = document.createElement("option");
+    const opt = doc.createElement("option");
     opt.value = l.code;
     opt.textContent = l.name;
     if (l.code === selected) opt.selected = true;
@@ -11086,18 +11087,19 @@ function setEngineSelect(sel, selected) {
 }
 
 function renderBlacklist(container, blacklist, onRemove) {
+  const doc = container.ownerDocument || document;
   container.innerHTML = "";
   if (!blacklist || !blacklist.length) {
-    const empty = document.createElement("div");
+    const empty = doc.createElement("div");
     empty.style.cssText = "color:#9ca3af;font-size:12px;padding:8px 0;";
     empty.textContent = t("emptyBlacklist");
     container.appendChild(empty);
     return;
   }
-  const wrap = document.createElement("div");
+  const wrap = doc.createElement("div");
   wrap.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
   blacklist.forEach((host) => {
-    const chip = document.createElement("div");
+    const chip = doc.createElement("div");
     chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid #fecaca;border-radius:14px;font-size:11px;color:#dc2626;background:#fef2f2;";
     chip.innerHTML = `<span>${escHtml(host)}</span><button data-remove style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:14px;padding:0 2px;">&times;</button>`;
     chip.querySelector("[data-remove]").addEventListener("click", () => onRemove(host));
@@ -11114,13 +11116,14 @@ const IGN_LANG_OPTIONS = [
 ];
 
 function renderIgnLangs(container, ignLangs, onChange) {
+  const doc = container.ownerDocument || document;
   container.innerHTML = "";
-  const wrap = document.createElement("div");
+  const wrap = doc.createElement("div");
   wrap.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
   IGN_LANG_OPTIONS.forEach((l) => {
-    const label = document.createElement("label");
+    const label = doc.createElement("label");
     label.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid #e2e8f0;border-radius:14px;font-size:11px;cursor:pointer;user-select:none;";
-    const cb = document.createElement("input");
+    const cb = doc.createElement("input");
     cb.type = "checkbox";
     cb.value = l.code;
     cb.checked = ignLangs.includes(l.code);
@@ -11130,7 +11133,7 @@ function renderIgnLangs(container, ignLangs, onChange) {
       onChange(checked);
     });
     label.appendChild(cb);
-    label.appendChild(document.createTextNode(l.label));
+    label.appendChild(doc.createTextNode(l.label));
     wrap.appendChild(label);
   });
   container.appendChild(wrap);
@@ -11392,40 +11395,39 @@ async function initSettingsPanel(panel) {
 
 
 // ===== options/index.js =====
-let optionsPanel = null;
+let settingsWindow = null;
 
 async function showOptionsPanel() {
-  if (optionsPanel && document.body.contains(optionsPanel)) {
-    closeOptionsPanel();
+  if (settingsWindow && !settingsWindow.closed) {
+    settingsWindow.focus();
     return;
   }
-
-  const overlay = document.createElement("div");
-  overlay.id = "ez-options-overlay";
-  const panel = document.createElement("div");
-  panel.id = "ez-options-panel";
-  overlay.appendChild(panel);
-  document.body.appendChild(overlay);
-
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) closeOptionsPanel();
-  });
-
+  const w = window.open('about:blank', 'ez-settings', 'width=640,height=720,resizable=yes,scrollbars=yes');
+  if (!w) {
+    console.warn('EZ-Translate: 请允许弹出窗口以打开设置');
+    return;
+  }
+  const d = w.document;
+  d.write('<!DOCTYPE html><html><head><title>EZ-Translate ' + t('optionsTitle') + '</title><meta charset="utf-8">');
+  d.write('<style>body{margin:0;padding:16px;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;color:#111827;}.ez-dark body{background:#1e1e2e;color:#cdd6f4;}</style>');
+  d.write('</head><body></body></html>');
+  d.close();
+  settingsWindow = w;
+  const panel = d.createElement('div');
+  d.body.appendChild(panel);
   try {
     await initSettingsPanel(panel);
   } catch (e) {
-    console.error("EZ-Translate settings panel error:", e);
-    overlay.remove();
-    return;
+    console.error('EZ-Translate settings error:', e);
+    w.close();
+    settingsWindow = null;
   }
-
-  optionsPanel = overlay;
 }
 
 function closeOptionsPanel() {
-  if (optionsPanel) {
-    optionsPanel.remove();
-    optionsPanel = null;
+  if (settingsWindow && !settingsWindow.closed) {
+    settingsWindow.close();
+    settingsWindow = null;
   }
 }
 
