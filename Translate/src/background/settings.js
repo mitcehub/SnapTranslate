@@ -15,12 +15,19 @@ const DEF = {
   selTL: getBrowserLang(),
   inputSL: "auto",
   inputTL: "en",
+  pgTL: getBrowserLang(),
   enSel: true,
   enInput: true,
+  enPage: true,
+  enFloat: true,
+  autoTranslate: false,
   ignLangs: [],
   selEngine: "google",
   inputEngine: "google",
+  pgEngine: "google",
+  blacklist: [],
   rulesUrl: "",
+  allowRemoteTTS: false,
 };
 
 export async function getSettings() {

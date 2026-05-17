@@ -1,11 +1,19 @@
-import { translate } from './translate-engine.js';
+import { translate, translateBatch } from './translate-engine.js';
 import { getSettings, LANGS, ENGINES } from './settings.js';
 import { getSiteRules, matchRule, resetRulesCache, fetchRemoteRules, saveRemoteRules } from './rules-data.js';
+import { isBlacklisted } from '../shared/constants.js';
 
 export function handleMessage(req, sender, respond) {
   if (req.action === "translate") {
     translate(req.text, req.sourceLang || "auto", req.targetLang || "en", req.engine)
       .then((r) => respond({ success: true, result: r }))
+      .catch((e) => respond({ success: false, error: e.message }));
+    return true;
+  }
+
+  if (req.action === "translateBatch") {
+    translateBatch(req.texts, req.sourceLang || "auto", req.targetLang || "en", req.engine)
+      .then((r) => respond({ success: true, results: r }))
       .catch((e) => respond({ success: false, error: e.message }));
     return true;
   }
@@ -49,6 +57,40 @@ export function handleMessage(req, sender, respond) {
   if (req.action === "setEnFloat") {
     getSettings().then(async (s) => {
       s.enFloat = !!req.value;
+      await chrome.storage.local.set({ settings: s });
+      respond({ success: true });
+    });
+    return true;
+  }
+
+  if (req.action === "checkBlacklist") {
+    getSettings().then((s) => {
+      let blacklisted = false;
+      try {
+        const hostname = new URL(req.url).hostname;
+        blacklisted = isBlacklisted(hostname, s.blacklist || []);
+      } catch { }
+      respond({ blacklisted });
+    });
+    return true;
+  }
+
+  if (req.action === "addBlacklist") {
+    getSettings().then(async (s) => {
+      if (!s.blacklist) s.blacklist = [];
+      if (!s.blacklist.includes(req.host)) {
+        s.blacklist.push(req.host);
+        await chrome.storage.local.set({ settings: s });
+      }
+      respond({ success: true });
+    });
+    return true;
+  }
+
+  if (req.action === "removeBlacklist") {
+    getSettings().then(async (s) => {
+      if (!s.blacklist) s.blacklist = [];
+      s.blacklist = s.blacklist.filter((h) => h !== req.host);
       await chrome.storage.local.set({ settings: s });
       respond({ success: true });
     });

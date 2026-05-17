@@ -1,4 +1,5 @@
 import { LANGS, I18N, getUILang, applyI18N } from './i18n.js';
+import { escHtml } from '../shared/constants.js';
 
 function populateSelect(id, selected) {
   const sel = document.getElementById(id);
@@ -23,30 +24,55 @@ function setEngineSelect(id, selected) {
   }
 }
 
-function renderBlacklist(blacklist) {
-  const list = document.getElementById("blacklistList");
-  if (!list) return;
-  list.innerHTML = "";
+function renderBlacklist(blacklist, saveFn) {
+  const container = document.getElementById("blacklistContainer");
+  if (!container) return;
+  container.innerHTML = "";
   if (!blacklist || !blacklist.length) {
-    const lang = getUILang();
-    const strings = I18N[lang] || I18N.en;
-    const li = document.createElement("li");
-    li.className = "blacklist-empty";
-    li.textContent = strings.emptyBlacklist;
-    list.appendChild(li);
+    const empty = document.createElement("div");
+    empty.className = "blacklist-empty";
+    empty.textContent = "No sites in blacklist";
+    empty.style.cssText = "color:#9ca3af;font-size:12px;padding:8px 0;";
+    container.appendChild(empty);
     return;
   }
+  const list = document.createElement("div");
+  list.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
   blacklist.forEach((host) => {
-    const li = document.createElement("li");
-    li.className = "blacklist-item";
-    li.innerHTML = `<span>${host}</span><button class="remove" title="Remove">&times;</button>`;
-    li.querySelector(".remove").addEventListener("click", () => {
-      chrome.runtime.sendMessage({ action: "removeBlacklist", host }, (r) => {
-        if (r && r.success) renderBlacklist(r.blacklist);
-      });
+    const chip = document.createElement("div");
+    chip.className = "blacklist-chip";
+    chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid #fecaca;border-radius:14px;font-size:11px;color:#dc2626;background:#fef2f2;";
+    chip.innerHTML = `<span>${escHtml(host)}</span><button class="remove" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;">&times;</button>`;
+    chip.querySelector(".remove").addEventListener("click", () => {
+      const updated = blacklist.filter((h) => h !== host);
+      saveFn(updated);
     });
-    list.appendChild(li);
+    list.appendChild(chip);
   });
+  container.appendChild(list);
+}
+
+function renderRulesList(rules) {
+  const container = document.getElementById("rulesList");
+  if (!container) return;
+  container.innerHTML = "";
+  if (!rules || !rules.length) {
+    const empty = document.createElement("div");
+    empty.style.cssText = "color:#9ca3af;font-size:12px;padding:8px 0;";
+    empty.textContent = "No rules loaded";
+    container.appendChild(empty);
+    return;
+  }
+  const list = document.createElement("div");
+  list.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;padding-top:8px;";
+  rules.forEach((rule) => {
+    const chip = document.createElement("div");
+    chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid #e2e8f0;border-radius:14px;font-size:11px;color:#475569;background:#f8fafc;";
+    const autoTag = rule.autoTranslate ? '<span style="color:#059669;font-weight:600;">Auto</span>' : '<span style="color:#9ca3af;">Manual</span>';
+    chip.innerHTML = `<span style="font-weight:500;">${escHtml(rule.name)}</span>${autoTag}<span style="color:#94a3b8;">${escHtml(rule.urlPattern)}</span>`;
+    list.appendChild(chip);
+  });
+  container.appendChild(list);
 }
 
 const IGN_LANG_OPTIONS = [
@@ -132,16 +158,21 @@ export async function initSettingsUI() {
   try {
     const r = await chrome.runtime.sendMessage({ action: "getSettings" });
     if (r && r.settings) settings = r.settings;
-  } catch {}
+  } catch { }
 
   populateSelect("selTL", settings.selTL || "en");
   populateSelect("inputTL", settings.inputTL || "en");
+  populateSelect("pgTL", settings.pgTL || "en");
 
   setEngineSelect("selEngine", settings.selEngine || "google");
   setEngineSelect("inputEngine", settings.inputEngine || "google");
+  setEngineSelect("pgEngine", settings.pgEngine || "google");
 
   document.getElementById("enSel").checked = settings.enSel !== false;
   document.getElementById("enInput").checked = settings.enInput !== false;
+  document.getElementById("enPage").checked = settings.enPage !== false;
+  document.getElementById("enFloat").checked = settings.enFloat !== false;
+  document.getElementById("autoTranslate").checked = settings.autoTranslate === true;
 
   renderIgnLangs(settings.ignLangs || [], (newIgnLangs) => {
     settings.ignLangs = newIgnLangs;
@@ -151,39 +182,75 @@ export async function initSettingsUI() {
   const rulesUrlInput = document.getElementById("rulesUrl");
   if (rulesUrlInput) rulesUrlInput.value = settings.rulesUrl || "";
 
+  const onBlacklistChange = (newBL) => {
+    settings.blacklist = newBL;
+    save();
+    renderBlacklist(newBL, onBlacklistChange);
+  };
+  renderBlacklist(settings.blacklist || [], onBlacklistChange);
+
+  // 规则标签展示已禁用
+
   function save() {
     const newSettings = {
       selTL: document.getElementById("selTL").value,
       inputTL: document.getElementById("inputTL").value,
+      pgTL: document.getElementById("pgTL")?.value || "en",
       selEngine: document.getElementById("selEngine").value,
       inputEngine: document.getElementById("inputEngine").value,
+      pgEngine: document.getElementById("pgEngine")?.value || "google",
       enSel: document.getElementById("enSel").checked,
       enInput: document.getElementById("enInput").checked,
+      enPage: document.getElementById("enPage")?.checked ?? true,
+      enFloat: document.getElementById("enFloat")?.checked ?? true,
+      autoTranslate: document.getElementById("autoTranslate")?.checked ?? false,
       ignLangs: settings.ignLangs || [],
+      blacklist: settings.blacklist || [],
       rulesUrl: document.getElementById("rulesUrl")?.value || "",
     };
     chrome.runtime.sendMessage({ action: "saveSettings", settings: newSettings });
   }
 
-  ["selTL", "inputTL"].forEach((id) => {
-    document.getElementById(id).addEventListener("change", save);
+  ["selTL", "inputTL", "pgTL"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("change", save);
   });
-  ["selEngine", "inputEngine"].forEach((id) => {
-    document.getElementById(id).addEventListener("change", save);
+  ["selEngine", "inputEngine", "pgEngine"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("change", save);
   });
-  ["enSel", "enInput"].forEach((id) => {
-    document.getElementById(id).addEventListener("change", save);
+  ["enSel", "enInput", "enPage", "enFloat", "autoTranslate"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("change", save);
   });
 
   document.getElementById("testSelEngine").addEventListener("click", () => testEngine("testSelEngine", "selEngine"));
   document.getElementById("testInputEngine").addEventListener("click", () => testEngine("testInputEngine", "inputEngine"));
+  document.getElementById("testPgEngine")?.addEventListener("click", () => testEngine("testPgEngine", "pgEngine"));
 
   if (rulesUrlInput) {
     rulesUrlInput.addEventListener("change", save);
   }
 
-  document.getElementById("refreshRules")?.addEventListener("click", () => {
-    const btn = document.getElementById("refreshRules");
+  const addBlacklistBtn = document.getElementById("addBlacklistBtn");
+  const blacklistInput = document.getElementById("blacklistInput");
+  if (addBlacklistBtn && blacklistInput) {
+    const addHost = () => {
+      const host = blacklistInput.value.trim();
+      if (!host) return;
+      if (!settings.blacklist) settings.blacklist = [];
+      if (!settings.blacklist.includes(host)) {
+        settings.blacklist.push(host);
+        save();
+        renderBlacklist(settings.blacklist, onBlacklistChange);
+      }
+      blacklistInput.value = "";
+    };
+    addBlacklistBtn.addEventListener("click", addHost);
+    blacklistInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") addHost();
+    });
+  }
+
+  document.getElementById("refreshRulesBtn")?.addEventListener("click", () => {
+    const btn = document.getElementById("refreshRulesBtn");
     const lang = getUILang();
     const strings = I18N[lang] || I18N.en;
     btn.disabled = true;
@@ -191,11 +258,12 @@ export async function initSettingsUI() {
     chrome.runtime.sendMessage({ action: "refreshRules" }, (r) => {
       btn.disabled = false;
       if (r && r.rules) {
-        btn.textContent = strings.refreshRulesSuccess;
+        btn.textContent = "OK ✓";
+        renderRulesList(r.rules);
       } else {
-        btn.textContent = strings.refreshRulesFail;
+        btn.textContent = "Fail ✗";
       }
-      setTimeout(() => { btn.textContent = strings.refreshRulesBtn; }, 3000);
+      setTimeout(() => { btn.textContent = strings.refreshRulesBtn || "Refresh"; }, 3000);
     });
   });
 }

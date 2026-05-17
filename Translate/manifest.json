@@ -27,7 +27,8 @@
     "activeTab"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "https://translate.googleapis.com/*",
+    "https://www.bing.com/*"
   ],
   "options_ui": {
     "page": "options.html",

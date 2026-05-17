@@ -7,6 +7,10 @@ export function doReplace(translated, actInput, selText, showToastFn) {
   try {
     if (actInput.tagName === "INPUT" || actInput.tagName === "TEXTAREA") {
       const st = actInput.selectionStart, en = actInput.selectionEnd;
+      if (actInput.value.substring(st, en) !== selText) {
+        showToastFn("选择区域已变化，请重新选择");
+        return;
+      }
       actInput.setRangeText(translated, st, en, "select");
       actInput.dispatchEvent(new Event("input", { bubbles: true }));
       actInput.dispatchEvent(new Event("change", { bubbles: true }));
@@ -22,5 +26,7 @@ export function doReplace(translated, actInput, selText, showToastFn) {
       }
     }
     showToastFn("Replaced ✓");
-  } catch {}
+  } catch (e) {
+    showToastFn("替换失败");
+  }
 }

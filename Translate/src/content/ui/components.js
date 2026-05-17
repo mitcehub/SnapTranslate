@@ -40,12 +40,12 @@ export function buildDropdown(id, val, includeAuto, onChange, disabled, panelRef
     });
     item.addEventListener("click", (e) => {
       e.stopPropagation();
-      btn.textContent = l.n;
-      btn.dataset.code = l.c;
+      btn.textContent = l.name;
+      btn.dataset.code = l.code;
       list.querySelectorAll(".tr-dd-item").forEach((it) => it.classList.remove("tr-dd-active"));
       item.classList.add("tr-dd-active");
       closeDropdown();
-      if (onChange) onChange(l.c);
+      if (onChange) onChange(l.code);
     });
     list.appendChild(item);
   });

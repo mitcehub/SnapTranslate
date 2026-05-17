@@ -1,46 +1,7 @@
 import { getSettings } from './settings.js';
+import { rules as BUNDLED_RULES } from '../rules.json';
 
 const DEFAULT_RULES_URL = "https://raw.githubusercontent.com/translate-ext/rules/main/rules.json";
-
-const DEF_RULES = [
-  {
-    name: "reddit",
-    urlPattern: "reddit.com",
-    containerSelector: "[data-testid='post-container'], .Post, .ListingLayout-outerContainer",
-    excludeSelectors: [".voteButtons", ".post-roast-action-bar", "[data-testid='post-media']", "time", "shreddit-post-actions"],
-    extraBlockTags: ["SHREDDIT-POST"]
-  },
-  {
-    name: "twitter",
-    urlPattern: "twitter.com|x.com",
-    containerSelector: "[data-testid='tweetText'], [data-testid='tweet']",
-    excludeSelectors: ["[data-testid='tweetPhoto']", "[role='group']", "time", "[data-testid='socialContext]"]
-  },
-  {
-    name: "github",
-    urlPattern: "github.com",
-    containerSelector: ".markdown-body, .comment-body, .js-discussion",
-    excludeSelectors: [".js-file-line", ".blob-code", ".CodeMirror", "pre code", ".react-code-text"]
-  },
-  {
-    name: "youtube",
-    urlPattern: "youtube.com",
-    containerSelector: "#description-inner, #content-text, ytd-comment-renderer",
-    excludeSelectors: ["ytd-thumbnail", "yt-icon", "#avatar", "#author-thumbnail"]
-  },
-  {
-    name: "wikipedia",
-    urlPattern: "wikipedia.org",
-    containerSelector: "#mw-content-text",
-    excludeSelectors: [".mw-editsection", ".reference", ".citation", ".navbox", ".sidebar", "table.infobox caption", ".toc"]
-  },
-  {
-    name: "stackoverflow",
-    urlPattern: "stackoverflow.com|stackexchange.com|superuser.com|askubuntu.com|serverfault.com",
-    containerSelector: ".post-text, .comment-text",
-    excludeSelectors: ["pre code", ".lang-", ".snippet-code", ".s-prose code"]
-  }
-];
 
 let cachedMerged = null;
 let remoteRules = null;
@@ -66,10 +27,10 @@ async function loadRulesFromStorage() {
       remoteRules = data.remoteRules;
       rulesETag = data.siteRulesETag || null;
       rulesLastFetch = data.siteRulesLastFetch || 0;
-      cachedMerged = mergeRules(DEF_RULES, remoteRules);
+      cachedMerged = mergeRules(BUNDLED_RULES, remoteRules);
       return cachedMerged;
     }
-  } catch {}
+  } catch { }
   return null;
 }
 
@@ -78,13 +39,13 @@ export async function saveRemoteRules(rules, etag) {
     remoteRules = rules;
     rulesETag = etag;
     rulesLastFetch = Date.now();
-    cachedMerged = mergeRules(DEF_RULES, rules);
+    cachedMerged = mergeRules(BUNDLED_RULES, rules);
     await chrome.storage.local.set({
       remoteRules: rules,
       siteRulesETag: etag || null,
       siteRulesLastFetch: rulesLastFetch
     });
-  } catch {}
+  } catch { }
 }
 
 async function fetchRemoteRules() {
@@ -93,19 +54,16 @@ async function fetchRemoteRules() {
   try {
     const headers = {};
     if (rulesETag) headers["If-None-Match"] = rulesETag;
-
     const resp = await fetch(rulesUrl, { headers, cache: "no-cache" });
     if (resp.status === 304) return cachedMerged;
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-
     const rules = await resp.json();
     if (!Array.isArray(rules)) throw new Error("Invalid rules format");
-
     const newETag = resp.headers.get("ETag");
     await saveRemoteRules(rules, newETag);
     return cachedMerged;
   } catch (e) {
-    return cachedMerged || DEF_RULES;
+    return cachedMerged || BUNDLED_RULES;
   }
 }
 
@@ -114,39 +72,123 @@ export async function getSiteRules() {
     const now = Date.now();
     if ((now - rulesLastFetch) < RULES_CACHE_TTL) return cachedMerged;
   }
-
   if (!cachedMerged) {
     const stored = await loadRulesFromStorage();
     if (stored) {
-      fetchRemoteRules().catch(() => {});
+      fetchRemoteRules().catch(() => { });
       return stored;
     }
   }
-
   const rules = await fetchRemoteRules();
-  if (!rules) return DEF_RULES;
+  if (!rules) return BUNDLED_RULES;
   return rules;
+}
+
+function extractHostPattern(pattern) {
+  let host = pattern;
+  if (host.includes('://')) host = host.split('://')[1];
+  if (host.includes('/')) host = host.split('/')[0];
+  return host;
+}
+
+function matchGlob(value, glob) {
+  const escaped = glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.');
+  try { return new RegExp('^' + escaped + '$').test(value); } catch { return false; }
+}
+
+function matchHostnameOrUrl(url, pattern) {
+  const parsed = new URL(url);
+  const hostname = parsed.hostname;
+
+  // Extract hostname portion and path portion from pattern
+  let hostPattern = pattern;
+  let pathPart = null;
+  if (hostPattern.includes('://')) hostPattern = hostPattern.split('://')[1];
+  const slashIdx = hostPattern.indexOf('/');
+  if (slashIdx !== -1) {
+    pathPart = hostPattern.substring(slashIdx);
+    hostPattern = hostPattern.substring(0, slashIdx);
+  }
+
+  // Wildcard host with path
+  if (hostPattern === '*') {
+    if (pathPart) return matchGlob(parsed.pathname + parsed.search, pathPart);
+    return true;
+  }
+
+  // Hostname matching
+  let hostMatch = false;
+  if (hostPattern === hostname) hostMatch = true;
+  else if (hostname.endsWith('.' + hostPattern)) hostMatch = true;
+  else if (hostPattern.startsWith('*.') && (hostname === hostPattern.slice(2) || hostname.endsWith('.' + hostPattern.slice(2)))) hostMatch = true;
+  else if (matchGlob(hostname, hostPattern)) hostMatch = true;
+
+  if (!hostMatch) return false;
+  if (pathPart) return matchGlob(parsed.pathname + parsed.search, pathPart);
+  return true;
+}
+
+function matchExcludeUrl(url, pattern) {
+  const parsed = new URL(url);
+  const hostname = parsed.hostname;
+  const hostPattern = extractHostPattern(pattern);
+  if (!hostname.endsWith(hostPattern) && hostPattern !== hostname) {
+    const dotHost = '.' + hostPattern;
+    if (!hostname.endsWith(dotHost) && hostname !== hostPattern) return false;
+  }
+  const slashIdx = pattern.indexOf('/', pattern.indexOf('://') + 3);
+  if (slashIdx === -1) return true;
+  const pathPart = pattern.substring(slashIdx);
+  const urlPath = parsed.pathname + parsed.search;
+  const escaped = pathPart.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.');
+  try {
+    return new RegExp('^' + escaped + '$').test(urlPath);
+  } catch { return false; }
+}
+
+function matchUrlAgainstPatterns(url, patterns) {
+  if (!patterns?.length) return false;
+  for (const p of patterns) {
+    const pattern = p.trim();
+    if (!pattern) continue;
+    if (matchHostnameOrUrl(url, pattern)) return true;
+  }
+  return false;
 }
 
 export function matchRule(rules, url) {
   try {
-    const hostname = new URL(url).hostname;
+    const parsed = new URL(url);
+    const hostname = parsed.hostname;
     for (const rule of rules) {
+      if (rule.excludeMatches?.length) {
+        let excluded = false;
+        for (const p of rule.excludeMatches) {
+          if (matchExcludeUrl(url, p)) { excluded = true; break; }
+        }
+        if (excluded) continue;
+      }
+      if (rule.matches?.length) {
+        if (matchUrlAgainstPatterns(url, rule.matches)) return rule;
+        continue;
+      }
       if (!rule.urlPattern) continue;
       const patterns = rule.urlPattern.split("|");
       for (const p of patterns) {
-        if (hostname.includes(p.trim())) return rule;
+        const pattern = p.trim();
+        if (!pattern) continue;
+        if (matchHostname(hostname, pattern)) return rule;
       }
     }
-  } catch {}
+  } catch { }
   return null;
 }
 
 export async function initRules() {
   const stored = await loadRulesFromStorage();
   if (!stored) {
-    cachedMerged = [...DEF_RULES];
-    fetchRemoteRules().catch(() => {});
+    cachedMerged = [...BUNDLED_RULES];
+    fetchRemoteRules().catch(() => { });
   }
 }
 

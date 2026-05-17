@@ -1,1 +1,8 @@
-{"name":{"message":"Translation Assistant"},"description":{"message":"A lightweight translation assistant. Select text on any page to translate instantly."}}
+{
+    "name": {
+        "message": "Translation Assistant"
+    },
+    "description": {
+        "message": "A lightweight translation assistant. Select text on any page to translate instantly."
+    }
+}

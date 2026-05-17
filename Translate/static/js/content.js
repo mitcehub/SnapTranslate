@@ -21,6 +21,13 @@
     { id: "bing", name: "Bing" },
   ];
 
+  const IGNORE_TAGS = new Set([
+    "SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "SELECT",
+    "CODE", "KBD", "SVG", "MATH", "INPUT", "BUTTON",
+    "IMG", "VIDEO", "AUDIO", "IFRAME", "OBJECT", "EMBED",
+    "CANVAS", "MAP", "AREA", "TRACK", "WBR", "BR",
+  ]);
+
   const TTS_LANG_MAP = {
     "auto": "en", "zh-CN": "zh-CN", "zh-TW": "zh-TW", "en": "en",
     "ja": "ja", "ko": "ko", "fr": "fr", "de": "de", "es": "es",
@@ -37,13 +44,14 @@
     if (/[\u0400-\u04ff]/.test(text)) return "ru";
     if (/[\u0600-\u06ff]/.test(text)) return "ar";
     if (/[\u0e00-\u0e7f]/.test(text)) return "th";
-    if (/[\u1a00-\u1a1f]/.test(text)) return "vi";
+    if (/[\u0100-\u01ef\u0300-\u033f]/.test(text)) return "vi";
     if (/[\u0900-\u097f]/.test(text)) return "hi";
     if (/[a-zA-Z]/.test(text)) return "en";
     return null;
   }
 
   function escHtml(s) {
+    if (s == null) return "";
     const d = document.createElement("div");
     d.textContent = s;
     return d.innerHTML;
@@ -59,12 +67,24 @@
     });
   }
 
+  function isBlacklisted$1(hostname, blacklist) {
+    if (!Array.isArray(blacklist)) return false;
+    return blacklist.some((pattern) => {
+      if (typeof pattern !== "string") return false;
+      if (pattern.startsWith("*.")) {
+        const base = pattern.slice(2);
+        return hostname === base || hostname.endsWith("." + base);
+      }
+      return hostname === pattern || hostname.endsWith("." + pattern);
+    });
+  }
+
   function sendMessage(msg) {
     return chrome.runtime.sendMessage(msg);
   }
 
   const icons = {
-    translate: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14"><path d="M5 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 4h7a2 2 0 012 2v12a2 2 0 01-2 2h-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 8h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14 12h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14 16h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+    translate: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="1.5" width="17" height="17" rx="3.5"/><path d="M6.5 11.5l3.5-6 3.5 6"/><path d="M8 10h4"/></svg>',
     copy: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     check: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14"><polyline points="20 6 9 17 4 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     close: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
@@ -85,14 +105,20 @@
   let currentAudio = null;
 
   function clearSpeakingBtn() {
-    const btn = document.querySelector(".tr-speak-btn.speaking");
-    if (btn) btn.classList.remove("speaking");
+    document.querySelectorAll(".tr-speak-btn.speaking").forEach((btn) => btn.classList.remove("speaking"));
   }
 
   function stopSpeak() {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (currentAudio) { currentAudio.pause(); currentAudio.src = ""; currentAudio = null; }
     clearSpeakingBtn();
+  }
+
+  async function isRemoteTTSAllowed() {
+    try {
+      const r = await chrome.storage.local.get(["settings"]);
+      return r.settings?.allowRemoteTTS === true;
+    } catch { return false; }
   }
 
   function speak(text, lang) {
@@ -107,16 +133,24 @@
       const matched = voices.find((v) => v.lang === ttsLang);
       if (matched) utter.voice = matched;
       utter.addEventListener("end", () => clearSpeakingBtn());
-      utter.addEventListener("error", () => { clearSpeakingBtn(); speakGoogleTTS(text, ttsLang); });
+      utter.addEventListener("error", async () => {
+        clearSpeakingBtn();
+        if (await isRemoteTTSAllowed()) {
+          speakGoogleTTS(text, ttsLang);
+        }
+      });
       speechSynthesis.speak(utter);
       return;
     }
 
-    speakGoogleTTS(text, ttsLang);
+    isRemoteTTSAllowed().then((allowed) => {
+      if (allowed) speakGoogleTTS(text, ttsLang);
+    });
   }
 
   function speakGoogleTTS(text, lang) {
-    const url = `https://translate.googleapis.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${lang}&client=dict-chrome-ex`;
+    const truncated = text.length > 200 ? text.substring(0, 200) : text;
+    const url = `https://translate.googleapis.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(truncated)}&tl=${lang}&client=dict-chrome-ex`;
     const audio = new Audio(url);
     currentAudio = audio;
     const onDone = () => { currentAudio = null; clearSpeakingBtn(); };
@@ -160,12 +194,12 @@
       });
       item.addEventListener("click", (e) => {
         e.stopPropagation();
-        btn.textContent = l.n;
-        btn.dataset.code = l.c;
+        btn.textContent = l.name;
+        btn.dataset.code = l.code;
         list.querySelectorAll(".tr-dd-item").forEach((it) => it.classList.remove("tr-dd-active"));
         item.classList.add("tr-dd-active");
         closeDropdown();
-        if (onChange) onChange(l.c);
+        if (onChange) onChange(l.code);
       });
       list.appendChild(item);
     });
@@ -341,6 +375,10 @@
     try {
       if (actInput.tagName === "INPUT" || actInput.tagName === "TEXTAREA") {
         const st = actInput.selectionStart, en = actInput.selectionEnd;
+        if (actInput.value.substring(st, en) !== selText) {
+          showToastFn("选择区域已变化，请重新选择");
+          return;
+        }
         actInput.setRangeText(translated, st, en, "select");
         actInput.dispatchEvent(new Event("input", { bubbles: true }));
         actInput.dispatchEvent(new Event("change", { bubbles: true }));
@@ -356,7 +394,9 @@
         }
       }
       showToastFn("Replaced ✓");
-    } catch {}
+    } catch (e) {
+      showToastFn("替换失败");
+    }
   }
 
   let tBar = null;
@@ -408,7 +448,6 @@
       let p = an.parentElement;
       while (p) {
         if (p.isContentEditable) { actInput = p; break; }
-        if (p.tagName === "INPUT" || p.tagName === "TEXTAREA") { actInput = p; break; }
         p = p.parentElement;
       }
     }
@@ -421,7 +460,7 @@
 
     tBar = document.createElement("div");
     tBar.className = "tr-bar";
-    tBar.innerHTML = `<button class="tr-btn tr-primary" id="tr-translate-btn">${svgIcon("translate")}<span>翻译</span></button>`;
+    tBar.innerHTML = `<button class="tr-btn tr-primary tr-btn-icon" id="tr-translate-btn">${svgIcon("translate")}</button>`;
     document.body.appendChild(tBar);
 
     const defaultTL = isInput ? (S.inputTL || "en") : (S.selTL || "en");
@@ -459,7 +498,7 @@
     const langWrap = document.createElement("div");
     langWrap.className = "tr-plang";
 
-    const srcDD = buildDropdown("tr-panel-src", "auto", true, () => {}, true, panel);
+    const srcDD = buildDropdown("tr-panel-src", "auto", true, () => { }, true, panel);
     const arrow = document.createElement("span");
     arrow.className = "tr-arrow";
     arrow.textContent = "→";
@@ -580,8 +619,967 @@
     doTranslate(txt, sl, newTL, engine || "google");
   }
 
-  let S = { selTL: "en", inputSL: "auto", inputTL: "en", enSel: true, enInput: true, ignLangs: [], selEngine: "google", inputEngine: "google" };
+  const UNIVERSAL_EXCLUDE_SELECTORS = [
+    "[contenteditable=\"true\"]",
+    ".notranslate",
+    "[translate=\"no\"]",
+    ".material-icons",
+    "material-icon",
+    "i.fa",
+    "i[class^=fa-]",
+    ".google-symbols",
+    "span[class^=material-symbols-]",
+    "time",
+    ".countdown",
+    ".visuallyhidden",
+    ".social-share",
+    ".prism-code",
+    ".enlighter-code",
+    ".rc-CodeBlock",
+    "[role=code]",
+    "[role=group]",
+    "div[class^=codeBlockContent]",
+    "div[class^=codeBlockLines]",
+    "table.highlight",
+    "div[data-paste-markdown-skip]",
+    ".reference-citations",
+    "cds-code-snippet",
+    ".interactive-markdown__code",
+    "#ace-editor",
+    ".jp-CodeMirrorEditor",
+    "[data-test='json-editor']",
+    "table.processedcode",
+    "[value=ka]",
+    "times",
+    "[data-ez-translated]",
+    "[data-click-id]",
+    "#immersive-translate-popup",
+    "#immersive-translate-float-ball",
+    "#monica-content-root",
+    "script",
+    "style",
+    "noscript",
+  ];
+  const STAY_ORIGINAL_SELECTORS = [
+    "span.katex",
+    ".math-block",
+    ".MathJax_Preview",
+    ".MathJax_Display",
+    ".math-container",
+    ".MathJax",
+    ".MathJax_SVG",
+    "math-renderer",
+    ".mwe-math-element",
+    "kbd",
+    "pre code",
+    ".code",
+    ".snippet-code",
+    ".lang-",
+    ".blob-code",
+    ".CodeMirror",
+    ".react-code-text",
+    ".reference",
+    ".citation",
+  ];
+  const STAY_ORIGINAL_TAGS = new Set([
+    "CODE", "TT", "IMG", "SUP", "SUB", "SAMP",
+    "MATH", "SEMANTICS", "MROW", "MO", "MFRAC",
+    "MSUP", "MI", "MN", "MSQRT", "D-MATH",
+    "MTEXT", "MSUB", "MSUBSUP", "MUNDER", "MOVER",
+    "MUNDEROVER", "MTABLE", "MTR", "MTD", "MLABELEDTR",
+    "MPADDED", "MPHANTOM", "MSPACE",
+  ]);
+  const SEMANTIC_MARKERS = {
+    "header": { "default-translate": "no" },
+    "nav": { "side": "1", "default-translate": "no" },
+    "footer:last-of-type": { "default-translate": "no" },
+  };
+  function applySemanticMarkers() {
+    for (const [sel, attrs] of Object.entries(SEMANTIC_MARKERS)) {
+      try {
+        const els = document.querySelectorAll(sel);
+        for (const el of els) {
+          for (const [key, val] of Object.entries(attrs)) {
+            if (!el.hasAttribute(key)) el.setAttribute(key, val);
+          }
+        }
+      } catch { }
+    }
+  }
+  function buildExcludeSet(excludeSelectors) {
+    const excluded = new Set();
+    for (const sel of UNIVERSAL_EXCLUDE_SELECTORS) {
+      try { for (const el of document.querySelectorAll(sel)) excluded.add(el); } catch { }
+    }
+    for (const sel of STAY_ORIGINAL_SELECTORS) {
+      try { for (const el of document.querySelectorAll(sel)) excluded.add(el); } catch { }
+    }
+    for (const sel of (excludeSelectors || [])) {
+      try { for (const el of document.querySelectorAll(sel)) excluded.add(el); } catch { }
+    }
+    return excluded;
+  }
+  function shouldSkipText(text, tl) {
+    if (!text) return true;
+    const trimmed = text.trim();
+    if (!trimmed) return true;
+    if (trimmed.length < 2) return true;
+    if (/^\d+$/.test(trimmed)) return true;
+    if (/^[\s\W]*$/.test(trimmed)) return true;
+    const words = trimmed.split(/\s+/).filter(w => /\w/.test(w));
+    if (words.length < 1) return true;
+    if (tl) {
+      const tlLower = tl.toLowerCase();
+      if (tlLower.startsWith("zh") && /[\u4e00-\u9fff]/.test(trimmed)) return true;
+      if (tlLower === "ja" && /[\u3040-\u309f\u30a0-\u30ff]/.test(trimmed)) return true;
+      if (tlLower === "ko" && /[\uac00-\ud7af]/.test(trimmed)) return true;
+    }
+    return false;
+  }
+  function shouldSkipElement(el, excluded) {
+    while (el) {
+      if (excluded.has(el)) return true;
+      el = el.parentElement;
+    }
+    return false;
+  }
+
+  const MARKER = 'data-ez-translated';
+  const MAX_TEXT_LENGTH_PER_REQUEST = 1800;
+  const MAX_TEXT_GROUP_LENGTH = 50;
+  const TRANSLATION_CACHE_KEY_PREFIX = 'tr-cache:';
+  const DEFER_CHARS_PER_FRAME = 5000;
+
+  let injectedCssCache = new Set();
+
+  function injectRuleCss(cssRules) {
+    if (!cssRules?.length) return;
+    const key = cssRules.join('|');
+    if (injectedCssCache.has(key)) return;
+    injectedCssCache.add(key);
+    try {
+      const style = document.createElement('style');
+      style.setAttribute('data-ez-css', '');
+      style.textContent = cssRules.join('\n');
+      document.head.appendChild(style);
+    } catch { }
+  }
+
+  function applyGlobalStyles(styles) {
+    if (!styles) return;
+    try {
+      const styleId = 'ez-global-styles';
+      if (document.getElementById(styleId)) return;
+      const css = Object.entries(styles)
+        .map(([sel, rules]) => `${sel} { ${rules} }`)
+        .join('\n');
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = css;
+      document.head.appendChild(style);
+    } catch { }
+  }
+
+  function applyFixedElements(fixedElements) {
+    if (!fixedElements?.length) return;
+    for (const { selector, text } of fixedElements) {
+      const els = document.querySelectorAll(selector);
+      for (const el of els) {
+        if (el.getAttribute(MARKER)) continue;
+        const txt = el.textContent.trim();
+        if (txt && txt !== text) {
+          el.textContent = text;
+          el.setAttribute(MARKER, 'fixed');
+        }
+      }
+    }
+  }
+
+  function collectVisibleTextNodes(root, excluded, skipTags) {
+    const nodes = [];
+    try {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        const text = node.textContent.trim();
+        if (!text) continue;
+        const parent = node.parentElement;
+        if (!parent) continue;
+        if (parent.closest(`[${MARKER}]`)) continue;
+        if (shouldSkipElement(parent, excluded)) continue;
+        if (skipTags.has(parent.tagName)) continue;
+        nodes.push(node);
+      }
+    } catch { }
+    return nodes;
+  }
+
+  function walkShadowText(root, excluded, skipTags, nodes, excludeSlots, enterShadow) {
+    if (root.nodeType === Node.ELEMENT_NODE) {
+      if (excludeSlots?.length) {
+        const slot = root.getAttribute('slot');
+        if (slot && excludeSlots.includes(slot)) return;
+      }
+    }
+    if (root.nodeType === Node.TEXT_NODE) {
+      const parent = root.parentElement;
+      if (!parent) return;
+      if (parent.closest(`[${MARKER}]`)) return;
+      if (shouldSkipElement(parent, excluded)) return;
+      if (skipTags.has(parent.tagName)) return;
+      if (!root.textContent.trim()) return;
+      nodes.push(root);
+      return;
+    }
+    if (enterShadow !== false && root.shadowRoot) {
+      walkShadowText(root.shadowRoot, excluded, skipTags, nodes, excludeSlots, enterShadow);
+    }
+    let child = root.firstChild;
+    while (child) {
+      walkShadowText(child, excluded, skipTags, nodes, excludeSlots, enterShadow);
+      child = child.nextSibling;
+    }
+  }
+
+  function collectByContainerMode(rule) {
+    const containers = document.querySelectorAll(rule.containerSelector);
+    if (!containers.length) return [];
+    const excluded = buildExcludeSet(rule.excludeSelectors);
+    if (rule.excludeSlots?.length) {
+      for (const container of containers) {
+        const allElements = container.querySelectorAll('*');
+        for (let i = 0; i < allElements.length; i++) {
+          const slot = allElements[i].getAttribute('slot');
+          if (slot && rule.excludeSlots.includes(slot)) excluded.add(allElements[i]);
+        }
+      }
+    }
+    const blockTags = new Set(rule.extraBlockSelectors || []);
+    const skipTags = new Set([...IGNORE_TAGS, ...(rule.extraBlockTags || []), ...STAY_ORIGINAL_TAGS, ...blockTags]);
+    const nodes = [];
+    const enterShadow = !rule.shadowSelectors?.length;
+    for (const root of containers) {
+      walkShadowText(root, excluded, skipTags, nodes, rule.excludeSlots, enterShadow);
+    }
+    if (rule.shadowSelectors?.length) {
+      for (const sel of rule.shadowSelectors) {
+        const parts = sel.split(' >>> ');
+        if (parts.length === 2) {
+          const hosts = document.querySelectorAll(parts[0]);
+          for (const host of hosts) {
+            if (host.shadowRoot) {
+              const targets = host.shadowRoot.querySelectorAll(parts[1]);
+              for (const target of targets) {
+                if (target.getAttribute(MARKER)) continue;
+                if (excluded.has(target)) continue;
+                const inner = collectVisibleTextNodes(target, excluded, skipTags);
+                nodes.push(...inner);
+              }
+            }
+          }
+        } else {
+          for (const el of document.querySelectorAll(sel)) {
+            if (el.getAttribute(MARKER)) continue;
+            if (excluded.has(el)) continue;
+            const inner = collectVisibleTextNodes(el, excluded, skipTags);
+            nodes.push(...inner);
+          }
+        }
+      }
+    }
+    return nodes;
+  }
+
+  function collectBySelectMode(rule) {
+    const selectors = rule.selectors;
+    if (!selectors?.length) return [];
+    const excluded = buildExcludeSet(rule.excludeSelectors);
+    const blockTags = new Set(rule.extraBlockSelectors || []);
+    const skipTags = new Set([...IGNORE_TAGS, ...STAY_ORIGINAL_TAGS, ...blockTags]);
+    const nodes = [];
+    for (const sel of selectors) {
+      if (sel.includes(' >>> ')) {
+        const parts = sel.split(' >>> ');
+        if (parts.length === 2) {
+          const hosts = document.querySelectorAll(parts[0]);
+          for (const host of hosts) {
+            if (host.shadowRoot) {
+              const targets = host.shadowRoot.querySelectorAll(parts[1]);
+              for (const target of targets) {
+                if (target.getAttribute(MARKER)) continue;
+                if (excluded.has(target)) continue;
+                const inner = collectVisibleTextNodes(target, excluded, skipTags);
+                nodes.push(...inner);
+              }
+            }
+          }
+        }
+      } else if (sel.includes(' -> ')) {
+        const parts = sel.split(' -> ').map(s => s.trim());
+        let current = document;
+        for (let i = 0; i < parts.length; i++) {
+          const isLast = i === parts.length - 1;
+          const found = current.querySelectorAll(parts[i]);
+          if (!found.length) break;
+          if (isLast) {
+            for (const el of found) {
+              if (el.getAttribute(MARKER)) continue;
+              if (excluded.has(el)) continue;
+              const inner = collectVisibleTextNodes(el, excluded, skipTags);
+              nodes.push(...inner);
+            }
+          } else {
+            const next = found[0];
+            current = next.shadowRoot || next;
+          }
+        }
+      } else {
+        let els = document.querySelectorAll(sel);
+        for (const el of els) {
+          if (el.getAttribute(MARKER)) continue;
+          if (excluded.has(el)) continue;
+          const inner = collectVisibleTextNodes(el, excluded, skipTags);
+          nodes.push(...inner);
+        }
+        for (const host of document.querySelectorAll('*')) {
+          if (!host.shadowRoot) continue;
+          try {
+            els = host.shadowRoot.querySelectorAll(sel);
+            for (const el of els) {
+              if (el.getAttribute(MARKER)) continue;
+              if (excluded.has(el)) continue;
+              const inner = collectVisibleTextNodes(el, excluded, skipTags);
+              nodes.push(...inner);
+            }
+          } catch { }
+        }
+      }
+    }
+    return nodes;
+  }
+
+  function collectTargetNodes(rule) {
+    if (rule.selectors?.length) return collectBySelectMode(rule);
+    return collectByContainerMode(rule);
+  }
+
+  function splitTextIntoGroups(nodes, maxLength, maxGroupLength) {
+    const groups = [];
+    let currentGroup = [];
+    let currentLength = 0;
+    for (const node of nodes) {
+      const text = node.textContent.trim();
+      if (!text) continue;
+      if (text.length > maxLength) {
+        if (currentGroup.length) {
+          groups.push(currentGroup);
+          currentGroup = [];
+          currentLength = 0;
+        }
+        groups.push([node]);
+        continue;
+      }
+      if (currentLength + text.length > maxLength || currentGroup.length >= maxGroupLength) {
+        if (currentGroup.length) {
+          groups.push(currentGroup);
+          currentGroup = [];
+          currentLength = 0;
+        }
+      }
+      currentGroup.push(node);
+      currentLength += text.length;
+    }
+    if (currentGroup.length) groups.push(currentGroup);
+    return groups;
+  }
+
+  let translationCache = new Map();
+  let translationCacheSize = 0;
+  const CACHE_SIZE_LIMIT = 5000;
+
+  function getCacheKey(text, sl, tl, engine) {
+    return `${TRANSLATION_CACHE_KEY_PREFIX}${engine}:${sl}->${tl}:${text.length}:${text.substring(0, 50)}`;
+  }
+
+  function cacheGet(key) {
+    const entry = translationCache.get(key);
+    if (entry) return entry;
+    try {
+      const stored = sessionStorage.getItem(key);
+      if (stored) {
+        translationCache.set(key, stored);
+        translationCacheSize++;
+        return stored;
+      }
+    } catch { }
+    return null;
+  }
+
+  function cacheSet(key, value) {
+    translationCache.set(key, value);
+    translationCacheSize++;
+    if (translationCacheSize > CACHE_SIZE_LIMIT) {
+      const firstKey = translationCache.keys().next().value;
+      if (firstKey !== undefined) {
+        translationCache.delete(firstKey);
+        translationCacheSize--;
+      }
+    }
+    try {
+      if (translationCacheSize <= 200) {
+        sessionStorage.setItem(key, value);
+      }
+    } catch { }
+  }
+
+  async function translateNodes(nodes, sl, tl, engine, languageFilter) {
+    if (!nodes.length) return 0;
+    const maxLength = MAX_TEXT_LENGTH_PER_REQUEST;
+    const maxGroupLength = MAX_TEXT_GROUP_LENGTH;
+    const groups = splitTextIntoGroups(nodes, maxLength, maxGroupLength);
+    let translated = 0;
+    let charsThisFrame = 0;
+    for (const group of groups) {
+      const toTranslate = [];
+      const cached = [];
+      for (const node of group) {
+        const text = node.textContent.trim();
+        if (shouldSkipText(text, languageFilter === 'skip-target' ? tl : null)) continue;
+        const key = getCacheKey(text, sl, tl, engine);
+        const cachedResult = cacheGet(key);
+        if (cachedResult) {
+          cached.push({ node, text: cachedResult, original: text });
+        } else {
+          toTranslate.push({ node, text, key });
+        }
+      }
+      for (const { node, text, original } of cached) {
+        if (!node.parentNode) continue;
+        const span = document.createElement('span');
+        span.textContent = text;
+        span.setAttribute(MARKER, 'page');
+        span.setAttribute('data-ez-original', original);
+        node.parentNode.replaceChild(span, node);
+        translated++;
+      }
+      if (toTranslate.length) {
+        const texts = toTranslate.map(t => t.text);
+        for (const { node } of toTranslate) {
+          if (!node.parentNode) continue;
+          const placeholder = document.createElement('span');
+          placeholder.className = 'tr-translating';
+          placeholder.setAttribute(MARKER, 'translating');
+          placeholder.textContent = node.textContent;
+          node.parentNode.replaceChild(placeholder, node);
+          node._placeholder = placeholder;
+        }
+        try {
+          const r = await sendMessage({
+            action: "translateBatch",
+            texts,
+            sourceLang: sl,
+            targetLang: tl,
+            engine
+          });
+          if (r?.success && Array.isArray(r.results)) {
+            for (let i = 0; i < toTranslate.length; i++) {
+              const { node, key } = toTranslate[i];
+              const resultText = r.results[i];
+              if (resultText == null) continue;
+              const placeholder = node._placeholder;
+              if (!placeholder || !placeholder.parentNode) continue;
+              const original = node.textContent.trim();
+              cacheSet(key, resultText);
+              const span = document.createElement('span');
+              span.textContent = resultText;
+              span.setAttribute(MARKER, 'page');
+              span.setAttribute('data-ez-original', original);
+              placeholder.parentNode.replaceChild(span, placeholder);
+              translated++;
+            }
+          } else {
+            for (const { node } of toTranslate) {
+              const ph = node._placeholder;
+              if (ph && ph.parentNode) {
+                ph.parentNode.replaceChild(node, ph);
+              }
+            }
+          }
+        } catch {
+          for (const { node } of toTranslate) {
+            const ph = node._placeholder;
+            if (ph && ph.parentNode) {
+              ph.parentNode.replaceChild(node, ph);
+            }
+          }
+        }
+      }
+      charsThisFrame += group.reduce((sum, node) => sum + node.textContent.length, 0);
+      if (charsThisFrame >= DEFER_CHARS_PER_FRAME) {
+        await new Promise(r => requestAnimationFrame(r));
+        charsThisFrame = 0;
+      }
+    }
+    return translated;
+  }
+
+  let observer = null;
+  let pollTimer = null;
+  let retranslateTimer = null;
+  let currentRule = null;
+  let currentSl = null;
+  let currentTl = null;
+  let currentEngine = null;
+
+  async function retranslate() {
+    if (retranslateTimer) return;
+    retranslateTimer = setTimeout(() => { retranslateTimer = null; }, 300);
+    const nodes = collectTargetNodes(currentRule);
+    if (nodes.length) {
+      await translateNodes(nodes, currentSl, currentTl, currentEngine, currentRule.languageFilter);
+    }
+  }
+
+  function startObserver() {
+    if (observer) observer.disconnect();
+    let pending = false;
+    const callback = () => {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(() => {
+        pending = false;
+        retranslate();
+      });
+    };
+    observer = new MutationObserver(callback);
+    observer.observe(document.body, { childList: true, subtree: true });
+    let polls = 0;
+    pollTimer = setInterval(() => {
+      if (document.hidden) return;
+      if (polls++ > 60) {
+        clearInterval(pollTimer);
+        pollTimer = setInterval(() => {
+          if (document.hidden) return;
+          retranslate();
+        }, 5000);
+        return;
+      }
+      retranslate();
+    }, 2000);
+  }
+
+  function stopObserver() {
+    if (observer) { observer.disconnect(); observer = null; }
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    if (retranslateTimer) { clearTimeout(retranslateTimer); retranslateTimer = null; }
+    currentRule = null;
+  }
+
+  async function waitForContainers(containerSelector, maxRetries = 30, delay = 200) {
+    if (!containerSelector) return [];
+    for (let i = 0; i < maxRetries; i++) {
+      const els = document.querySelectorAll(containerSelector);
+      if (els.length) return els;
+      await new Promise(r => setTimeout(r, delay));
+    }
+    return document.querySelectorAll(containerSelector);
+  }
+
+  async function waitForSelectors(selectors, maxRetries = 30, delay = 200) {
+    for (let i = 0; i < maxRetries; i++) {
+      for (const sel of selectors) {
+        const cleanSel = sel.split(' >>> ')[0].split(' -> ')[0].trim();
+        if (document.querySelectorAll(cleanSel).length) return true;
+      }
+      await new Promise(r => setTimeout(r, delay));
+    }
+    return false;
+  }
+
+  async function applyPageRule(rule, sl, tl, engine) {
+    applySemanticMarkers();
+    applyFixedElements(rule.fixedElements);
+
+    if (rule.injectedCss?.length) injectRuleCss(rule.injectedCss);
+    if (rule.globalStyles) applyGlobalStyles(rule.globalStyles);
+
+    if (rule.selectors?.length) {
+      await waitForSelectors(rule.selectors);
+    } else if (rule.containerSelector) {
+      await waitForContainers(rule.containerSelector);
+    }
+    currentRule = rule;
+    currentSl = sl;
+    currentTl = tl;
+    currentEngine = engine;
+    const nodes = collectTargetNodes(rule);
+    if (nodes.length) {
+      await translateNodes(nodes, sl, tl, engine, rule.languageFilter);
+    }
+    startObserver();
+  }
+
+  let isDark = false;
+  let themeObserver = null;
+  let applyingTheme = false;
+
+  function applyTheme(floatEl, getIconUrlFn) {
+    if (applyingTheme) return;
+    applyingTheme = true;
+    detectDark();
+    if (isDark) document.documentElement.setAttribute("data-tr-theme", "dark");
+    else document.documentElement.removeAttribute("data-tr-theme");
+    applyingTheme = false;
+  }
+
+  function detectDark() {
+    isDark = false;
+    const els = [document.body, document.documentElement];
+    for (const el of els) {
+      if (!el) continue;
+      const bg = window.getComputedStyle(el).backgroundColor;
+      if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") {
+        const m = bg.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+        if (m) {
+          const lum = (0.299 * +m[1] + 0.587 * +m[2] + 0.114 * +m[3]) / 255;
+          if (lum < 0.5) { isDark = true; return; }
+          return;
+        }
+      }
+    }
+  }
+
+  function watchTheme(applyThemeFn) {
+    if (themeObserver) return;
+    themeObserver = new MutationObserver(() => {
+      requestAnimationFrame(() => applyThemeFn());
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style", "data-theme", "color"] });
+    if (document.body) {
+      themeObserver.observe(document.body, { attributes: true, attributeFilter: ["class", "style", "data-theme", "color"] });
+    }
+  }
+
+  function getIconUrl() {
+    return chrome.runtime.getURL(isDark ? "assets/dark-256.png" : "assets/256.png");
+  }
+
+  const GENERIC_RULE = {
+    name: "通用规则",
+    selectors: ["p", "h1", "h2", "h3", "h4", "h5", "h6", "article", "main", "section", "blockquote", "li", "td", "th", "figcaption", "details", "summary", "label", "dd", "dt"],
+    excludeMatches: [],
+    autoTranslate: true,
+    translateUI: false,
+  };
+
+  const LS_PREFIX = "ez-translate:";
+  function lsGet(key) {
+    try {
+      const val = localStorage.getItem(LS_PREFIX + key);
+      if (val !== null) return val;
+      const oldVal = localStorage.getItem(key);
+      if (oldVal !== null) { localStorage.setItem(LS_PREFIX + key, oldVal); localStorage.removeItem(key); }
+      return oldVal;
+    } catch { return null; }
+  }
+  function lsSet(key, value) {
+    try { localStorage.setItem(LS_PREFIX + key, value); } catch { }
+  }
+
+  let S = {
+    selTL: "en", inputSL: "auto", inputTL: "en", pgTL: "en",
+    enSel: true, enInput: true, enPage: true, enFloat: true, autoTranslate: true,
+    ignLangs: [], selEngine: "google", inputEngine: "google", pgEngine: "google",
+    blacklist: [], rulesUrl: ""
+  };
   let ready = false;
+  let isBlacklisted = false;
+  let sessionDisabled = false;
+  let pgTranslating = false;
+  let siteRule = null;
+  let float = null;
+  let floatPos = null;
+  let floatDragged = false;
+  let floatMenu = null;
+  let currentUrl = location.href;
+  let urlChangeTimer = null;
+
+  function setupSpaUrlDetection() {
+    const origPushState = history.pushState.bind(history);
+    const origReplaceState = history.replaceState.bind(history);
+
+    history.pushState = function (...args) {
+      const result = origPushState(...args);
+      onUrlChange();
+      return result;
+    };
+
+    history.replaceState = function (...args) {
+      const result = origReplaceState(...args);
+      onUrlChange();
+      return result;
+    };
+
+    window.addEventListener("popstate", () => onUrlChange());
+  }
+
+  function onUrlChange(source) {
+    const newUrl = location.href;
+    if (newUrl === currentUrl) return;
+
+    const oldPath = new URL(currentUrl).pathname;
+    const newPath = new URL(newUrl).pathname;
+    currentUrl = newUrl;
+
+    if (oldPath === newPath) return;
+
+    if (urlChangeTimer) clearTimeout(urlChangeTimer);
+    urlChangeTimer = setTimeout(() => handleSpaNavigation(), 300);
+  }
+
+  async function handleSpaNavigation() {
+    if (!S.enPage || isBlacklisted) return;
+
+    if (pgTranslating) {
+      revertPageTranslation();
+    }
+
+    try {
+      const resp = await sendMessage({ action: "getSiteRule", url: location.href });
+      if (resp?.rule) {
+        siteRule = resp.rule;
+        if (S.autoTranslate && siteRule.autoTranslate) {
+          pgTranslating = true;
+          const st = await showTransStatus(`匹配规则: ${siteRule.name}，自动翻译`);
+          await applyPageRule(siteRule, "auto", S.pgTL || S.selTL, S.pgEngine || "google");
+          clearTransStatus(st);
+          if (pgTranslating && float) float.classList.add("tr-translated");
+        }
+      } else if (S.autoTranslate) {
+        siteRule = GENERIC_RULE;
+        const st = await showTransStatus("未匹配到规则，使用通用规则", true);
+        await applyPageRule(GENERIC_RULE, "auto", S.pgTL || S.selTL, S.pgEngine || "google");
+        clearTransStatus(st);
+      }
+    } catch { }
+  }
+
+  function loadFloatPos() {
+    try {
+      const raw = lsGet("tr-float-pos");
+      if (raw) { floatPos = JSON.parse(raw); floatDragged = true; }
+    } catch { }
+    if (!floatPos) floatPos = { right: 24, top: Math.round(innerHeight / 2 - 18) };
+  }
+
+  function saveFloatPos() {
+    if (!float || !floatPos) return;
+    try { lsSet("tr-float-pos", JSON.stringify(floatPos)); } catch { }
+  }
+
+  function applyFloatPos() {
+    if (!float || !floatPos) return;
+    const fw = 36, fh = 36;
+    let l, t;
+    if (floatPos.left != null) l = floatPos.left;
+    else if (floatPos.right != null) l = innerWidth - floatPos.right - fw;
+    if (floatPos.top != null) t = floatPos.top;
+    else if (floatPos.bottom != null) t = innerHeight - floatPos.bottom - fh;
+    l = Math.max(4, Math.min(l, innerWidth - fw - 4));
+    t = Math.max(4, Math.min(t, innerHeight - fh - 4));
+    float.style.left = l + "px";
+    float.style.top = t + "px";
+  }
+
+  function closeFloatMenu() {
+    if (floatMenu) { floatMenu.remove(); floatMenu = null; }
+  }
+
+  function revertPageTranslation() {
+    stopObserver();
+    document.querySelectorAll("[data-ez-translated='page']").forEach((el) => {
+      if (el.hasAttribute('data-ez-original')) {
+        const original = el.getAttribute('data-ez-original');
+        const textNode = document.createTextNode(original);
+        el.parentNode.replaceChild(textNode, el);
+      }
+    });
+    document.querySelectorAll("[data-ez-translated='fixed']").forEach((el) => {
+      el.removeAttribute("data-ez-translated");
+    });
+    pgTranslating = false;
+    if (float) float.classList.remove("tr-translated");
+  }
+
+  function showDisableMenu() {
+    closeFloatMenu();
+    floatMenu = document.createElement("div");
+    floatMenu.className = "tr-float-menu";
+    const rect = float.getBoundingClientRect();
+    const items = [
+      { icon: svgIcon("eyeOff"), label: "下次打开", desc: "关闭本次，下次访问时重新显示", action: () => { removeFloat(); closeFloatMenu(); } },
+      { icon: svgIcon("clock"), label: "临时禁用", desc: "本次会话中不再显示", action: () => { try { sessionStorage.setItem(LS_PREFIX + "tr-float-disabled", "1"); } catch { } removeFloat(); closeFloatMenu(); showToast("已临时禁用"); } },
+      { icon: svgIcon("ban"), label: "永久禁用此网站", desc: "将此网站加入网页翻译黑名单", cls: "danger", action: async () => { const host = location.hostname; try { await sendMessage({ action: "addBlacklist", host }); } catch { } revertPageTranslation(); removeFloat(); closeFloatMenu(); showToast("已加入网页翻译黑名单"); } },
+    ];
+    items.forEach((it) => {
+      const div = document.createElement("div");
+      div.className = "tr-float-menu-item" + (it.cls ? " " + it.cls : "");
+      div.innerHTML = it.icon + `<div class="tr-menu-text"><span class="tr-menu-label">${it.label}</span><span class="tr-menu-desc">${it.desc}</span></div>`;
+      div.addEventListener("click", (ev) => { ev.stopPropagation(); it.action(); });
+      floatMenu.appendChild(div);
+    });
+    const sep = document.createElement("div");
+    sep.className = "tr-menu-sep";
+    floatMenu.appendChild(sep);
+    const settingsItem = document.createElement("div");
+    settingsItem.className = "tr-float-menu-item";
+    settingsItem.innerHTML = svgIcon("settings") + `<div class="tr-menu-text"><span class="tr-menu-label">设置</span></div>`;
+    settingsItem.addEventListener("click", (ev) => { ev.stopPropagation(); sendMessage({ action: "openOptions" }); closeFloatMenu(); });
+    floatMenu.appendChild(settingsItem);
+    document.body.appendChild(floatMenu);
+    const mw = floatMenu.offsetWidth;
+    const mh = floatMenu.offsetHeight;
+    let left = rect.left + rect.width / 2 - mw / 2;
+    let top = rect.top - 8;
+    if (left + mw > innerWidth - 8) left = innerWidth - mw - 8;
+    if (left < 8) left = 8;
+    if (top - mh < 8) top = rect.bottom + 8;
+    else top = top - mh;
+    floatMenu.style.left = left + "px";
+    floatMenu.style.top = top + "px";
+    setTimeout(() => {
+      const handler = (ev) => {
+        if (floatMenu && !floatMenu.contains(ev.target) && !float.contains(ev.target)) {
+          closeFloatMenu();
+          document.removeEventListener("mousedown", handler, true);
+        }
+      };
+      document.addEventListener("mousedown", handler, true);
+    }, 50);
+  }
+
+  function createFloat() {
+    if (float || isBlacklisted || sessionDisabled) return;
+    loadFloatPos();
+    float = document.createElement("div");
+    float.className = "tr-float";
+    const img = document.createElement("img");
+    img.src = getIconUrl();
+    img.alt = "";
+    float.appendChild(img);
+    const check = document.createElement("div");
+    check.className = "tr-float-check";
+    check.innerHTML = svgIcon("check");
+    float.appendChild(check);
+    const xBtn = document.createElement("div");
+    xBtn.className = "tr-float-x";
+    xBtn.innerHTML = svgIcon("close");
+    float.appendChild(xBtn);
+    float.title = "Translate this page";
+    if (pgTranslating) float.classList.add("tr-translated");
+    applyFloatPos();
+    let dragging = false, dragMoved = false;
+    let startMX = 0, startMY = 0, startL = 0, startT = 0;
+    float.addEventListener("mousedown", (e) => {
+      if (e.target === xBtn || xBtn.contains(e.target)) return;
+      if (e.button !== 0) return;
+      e.preventDefault();
+      dragging = true;
+      dragMoved = false;
+      startMX = e.clientX;
+      startMY = e.clientY;
+      const rect = float.getBoundingClientRect();
+      startL = rect.left;
+      startT = rect.top;
+      float.classList.add("tr-dragging");
+      document.addEventListener("mousemove", onDragMove);
+      document.addEventListener("mouseup", onDragEnd);
+    });
+    function onDragMove(e) {
+      if (!dragging) return;
+      const dx = e.clientX - startMX;
+      const dy = e.clientY - startMY;
+      if (!dragMoved && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) dragMoved = true;
+      if (dragMoved) {
+        const fw = 36, fh = 36;
+        let l = startL + dx;
+        let t = startT + dy;
+        l = Math.max(4, Math.min(l, innerWidth - fw - 4));
+        t = Math.max(4, Math.min(t, innerHeight - fh - 4));
+        float.style.left = l + "px";
+        float.style.top = t + "px";
+      }
+    }
+    function onDragEnd() {
+      if (!dragging) return;
+      dragging = false;
+      float.classList.remove("tr-dragging");
+      document.removeEventListener("mousemove", onDragMove);
+      document.removeEventListener("mouseup", onDragEnd);
+      if (dragMoved) {
+        const rect = float.getBoundingClientRect();
+        floatPos = { left: rect.left, top: rect.top };
+        saveFloatPos();
+        closeFloatMenu();
+      } else {
+        if (pgTranslating) {
+          revertPageTranslation();
+        } else {
+          startPageTranslate();
+        }
+      }
+    }
+    xBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (floatMenu) closeFloatMenu();
+      else showDisableMenu();
+    });
+    document.body.appendChild(float);
+  }
+
+  function removeFloat() {
+    if (float) { float.remove(); float = null; }
+  }
+
+  async function showTransStatus(msg) {
+    const t = document.createElement("div");
+    t.className = "tr-toast";
+    t.textContent = msg;
+    document.body.appendChild(t);
+    return t;
+  }
+
+  function clearTransStatus(el) {
+    if (el) el.remove();
+  }
+
+  async function startPageTranslate() {
+    if (isBlacklisted) {
+      showToast("此网站已在网页翻译黑名单中");
+      return;
+    }
+    if (pgTranslating) {
+      revertPageTranslation();
+      return;
+    }
+    pgTranslating = true;
+    let statusEl = null;
+    try {
+      const rr = await sendMessage({ action: "getSiteRule", url: location.href });
+      siteRule = rr?.rule || null;
+    } catch { }
+    if (!siteRule) {
+      statusEl = await showTransStatus("未匹配到网站规则，使用通用规则翻译");
+    } else {
+      statusEl = await showTransStatus(`匹配规则: ${siteRule.name}，开始翻译`);
+    }
+    await applyPageRule(siteRule, "auto", S.pgTL || S.selTL, S.pgEngine || "google");
+    clearTransStatus(statusEl);
+    if (pgTranslating) {
+      showToast("翻译完成 ✓");
+      if (float) float.classList.add("tr-translated");
+    }
+  }
 
   document.addEventListener("mouseup", (e) => {
     if (!ready) return;
@@ -612,19 +1610,73 @@
   }, true);
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") { clearAll(); }
+    if (e.key === "Escape") { clearAll(); revertPageTranslation(); }
   }, true);
+
+  window.addEventListener("resize", () => {
+    if (!float) return;
+    if (!floatDragged) {
+      floatPos = { right: 24, top: Math.round(innerHeight / 2 - 18) };
+    }
+    applyFloatPos();
+  });
 
   async function init() {
     try {
       const r = await sendMessage({ action: "getSettings" });
       if (r && r.settings) S = { ...S, ...r.settings };
-    } catch {}
+    } catch { }
+
+    try {
+      const r = await sendMessage({ action: "checkBlacklist", url: location.href });
+      if (r && r.blacklisted) isBlacklisted = true;
+    } catch { }
+
+    try {
+      if (sessionStorage.getItem(LS_PREFIX + "tr-float-disabled") === "1") sessionDisabled = true;
+    } catch { }
+
+    setupSpaUrlDetection();
+
+    applyTheme();
+    watchTheme(() => {
+      applyTheme();
+      if (float) {
+        const img = float.querySelector("img");
+        if (img) img.src = getIconUrl();
+      }
+    });
+
+    if (S.enPage && !isBlacklisted && S.enFloat) {
+      createFloat();
+    }
+
+    if (S.enPage && !isBlacklisted) {
+      try {
+        const resp = await sendMessage({ action: "getSiteRule", url: location.href });
+        if (resp?.rule) {
+          siteRule = resp.rule;
+          if (S.autoTranslate && siteRule.autoTranslate) {
+            pgTranslating = true;
+            const st = await showTransStatus(`匹配规则: ${siteRule.name}，自动翻译`);
+            await applyPageRule(siteRule, "auto", S.pgTL || S.selTL, S.pgEngine || "google");
+            clearTransStatus(st);
+            if (pgTranslating && float) float.classList.add("tr-translated");
+          }
+        } else if (S.autoTranslate) {
+          siteRule = GENERIC_RULE;
+          const st = await showTransStatus("未匹配到规则，使用通用规则");
+          await applyPageRule(GENERIC_RULE, "auto", S.pgTL || S.selTL, S.pgEngine || "google");
+          clearTransStatus(st);
+        }
+      } catch { }
+    }
 
     ready = true;
 
     chrome.runtime.onMessage.addListener((msg) => {
       if (msg.action === "show-toast" && msg.msg) showToast(msg.msg);
+      if (msg.action === "page-translate") startPageTranslate();
       if (msg.action === "showTranslation" && msg.result) {
         clearAll();
         let tBar = document.createElement("div");
@@ -638,11 +1690,11 @@
         setPanel(panel);
         const head = document.createElement("div");
         head.className = "tr-phead";
-        head.innerHTML = `<div class="tr-plang"><span style="font-size:11px;color:#6b7280">→ ${msg.tl}</span></div><button class="tr-pclose">${svgIcon("close")}</button>`;
+        head.innerHTML = `<div class="tr-plang"><span style="font-size:11px;color:#6b7280">→ ${escHtml(msg.tl || '')}</span></div><button class="tr-pclose">${svgIcon("close")}</button>`;
         head.querySelector(".tr-pclose").addEventListener("click", () => clearAll());
         const body = document.createElement("div");
         body.className = "tr-pbody";
-        body.innerHTML = `<div class="tr-original"><span class="tr-original-text">${escHtml((msg.text || "").substring(0, 200))}</span><button class="tr-speak-btn" data-lang="auto">${svgIcon("volume")}</button></div><div class="tr-result"><span class="tr-result-text">${escHtml(msg.result)}</span><button class="tr-speak-btn" data-lang="${msg.tl}">${svgIcon("volume")}</button></div><div class="tr-actions"><button class="tr-copy-btn">${svgIcon("copy")}Copy</button></div>`;
+        body.innerHTML = `<div class="tr-original"><span class="tr-original-text">${escHtml((msg.text || "").substring(0, 200))}</span><button class="tr-speak-btn" data-lang="auto">${svgIcon("volume")}</button></div><div class="tr-result"><span class="tr-result-text">${escHtml(msg.result)}</span><button class="tr-speak-btn" data-lang="${escHtml(msg.tl || '')}">${svgIcon("volume")}</button></div><div class="tr-actions"><button class="tr-copy-btn">${svgIcon("copy")}Copy</button></div>`;
         attachCopyHandler(body.querySelector(".tr-copy-btn"), msg.result);
         attachSpeakHandlers(body);
         panel.appendChild(head);
@@ -663,6 +1715,15 @@
     chrome.storage.onChanged.addListener((changes) => {
       if (changes.settings) {
         S = { ...S, ...changes.settings.newValue };
+        const newBL = S.blacklist || [];
+        const wasBlacklisted = isBlacklisted;
+        isBlacklisted = isBlacklisted$1(location.hostname, newBL);
+        if (wasBlacklisted && !isBlacklisted) {
+          sessionDisabled = false;
+          try { sessionStorage.removeItem(LS_PREFIX + "tr-float-disabled"); } catch { }
+        }
+        if (S.enFloat && !isBlacklisted && !sessionDisabled) createFloat();
+        else removeFloat();
       }
     });
   }

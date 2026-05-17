@@ -99,3 +99,14 @@ select:focus, input[type="text"]:focus {
 .test-btn:hover { background: #f3f4f6 }
 .test-btn.test-success { color: #22c55e; border-color: #bbf7d0 }
 .test-btn.test-fail { color: #ef4444; border-color: #fecaca }
+.blacklist-container { padding: 8px 0 }
+.blacklist-add { display: flex; gap: 8px; padding-top: 8px }
+.blacklist-add input { flex: 1; min-width: 0 }
+.add-btn {
+  height: 32px; padding: 0 14px; border: none; border-radius: 6px;
+  background: #6366f1; color: #fff; font-size: 12px; font-weight: 500;
+  cursor: pointer; white-space: nowrap
+}
+.add-btn:hover { background: #4f46e5 }
+.rules-list { padding-top: 4px }
+.text-input { min-width: 200px }

@@ -6,6 +6,13 @@
     "pt", "ru", "ar", "th", "vi", "id", "it", "nl", "pl", "tr", "hi",
   ];
 
+  function escHtml(s) {
+    if (s == null) return "";
+    const d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
   function makeLangNames(names) {
     return LANG_CODES.map((code) => ({ code, name: names[code] || code }));
   }
@@ -27,6 +34,8 @@
       inputTargetLangDesc: "Target language for input box translation",
       pageTargetLang: "Page Translation Target",
       pageTargetLangDesc: "Target language for full page translation",
+      pgTargetLang: "Page Target Language",
+      pgTargetLangDesc: "Target language for page translation",
       featureSettings: "Feature Settings",
       enableSelTrans: "Enable Selection Translation",
       enableSelTransDesc: "Show translate button on text selection",
@@ -34,10 +43,14 @@
       enableInputTransDesc: "Show translate button in input boxes",
       ignoreLangs: "Exclude Languages",
       ignoreLangsDesc: "Skip translation for these languages",
-      enableFloatBtn: "Enable Floating Button",
-      enableFloatBtnDesc: "Show floating translate button on pages",
+      enablePageTrans: "Enable Page Translation",
+      enablePageTransDesc: "Auto-translate pages matching rules",
+      enableFloatBtn: "Enable Float Button",
+      enableFloatBtnDesc: "Show floating button on supported pages",
       enableContext: "Enable Context Menu",
       enableContextDesc: "Show translate options in right-click menu",
+      autoTranslate: "Auto Translate",
+      autoTranslateDesc: "Automatically translate when visiting supported sites",
       blacklistTitle: "Page Translation Blacklist",
       blacklistDesc: "Sites in this list will not be auto-translated. Selection translation still works.",
       blacklistPlaceholder: "e.g. example.com or *.example.com",
@@ -67,6 +80,8 @@
       inputTargetLangDesc: "输入框中翻译的目标语言",
       pageTargetLang: "网页翻译目标语言",
       pageTargetLangDesc: "整页翻译的目标语言",
+      pgTargetLang: "网页目标语言",
+      pgTargetLangDesc: "网页翻译的目标语言",
       featureSettings: "功能设置",
       enableSelTrans: "启用划词翻译",
       enableSelTransDesc: "选中文本时显示翻译按钮",
@@ -74,10 +89,14 @@
       enableInputTransDesc: "在输入框中显示翻译按钮",
       ignoreLangs: "排除语言",
       ignoreLangsDesc: "不翻译这些语言的文本",
-      enableFloatBtn: "启用浮动按钮",
-      enableFloatBtnDesc: "在页面上显示浮动翻译按钮",
+      enablePageTrans: "启用网页翻译",
+      enablePageTransDesc: "自动翻译匹配规则的网页",
+      enableFloatBtn: "启用悬浮按钮",
+      enableFloatBtnDesc: "在支持的页面上显示悬浮按钮",
       enableContext: "启用右键菜单",
       enableContextDesc: "在右键菜单中显示翻译选项",
+      autoTranslate: "自动翻译",
+      autoTranslateDesc: "访问支持的网站时自动翻译",
       blacklistTitle: "网页翻译黑名单",
       blacklistDesc: "黑名单中的网站不会自动翻译整页，划词翻译仍可正常使用",
       blacklistPlaceholder: "例如 example.com 或 *.example.com",
@@ -107,6 +126,8 @@
       inputTargetLangDesc: "入力ボックスの翻訳先言語",
       pageTargetLang: "ページ翻訳先言語",
       pageTargetLangDesc: "ページ全体の翻訳先言語",
+      pgTargetLang: "ページ翻訳先言語",
+      pgTargetLangDesc: "ページ翻訳の対象言語",
       featureSettings: "機能設定",
       enableSelTrans: "選択翻訳を有効にする",
       enableSelTransDesc: "テキスト選択時に翻訳ボタンを表示",
@@ -114,10 +135,14 @@
       enableInputTransDesc: "入力ボックスに翻訳ボタンを表示",
       ignoreLangs: "除外言語",
       ignoreLangsDesc: "これらの言語のテキストは翻訳しません",
+      enablePageTrans: "ページ翻訳を有効にする",
+      enablePageTransDesc: "ルールに一致するページを自動翻訳",
       enableFloatBtn: "フローティングボタンを有効にする",
-      enableFloatBtnDesc: "ページにフローティング翻訳ボタンを表示",
+      enableFloatBtnDesc: "対応ページにフローティングボタンを表示",
       enableContext: "コンテキストメニューを有効にする",
       enableContextDesc: "右クリックメニューに翻訳オプションを表示",
+      autoTranslate: "自動翻訳",
+      autoTranslateDesc: "対応サイト訪問時に自動翻訳",
       blacklistTitle: "ページ翻訳ブラックリスト",
       blacklistDesc: "ブラックリストのサイトはページ翻訳されません。選択翻訳は引き続き使用できます",
       blacklistPlaceholder: "例: example.com または *.example.com",
@@ -147,6 +172,8 @@
       inputTargetLangDesc: "입력 상자 번역의 대상 언어",
       pageTargetLang: "페이지 번역 대상 언어",
       pageTargetLangDesc: "전체 페이지 번역의 대상 언어",
+      pgTargetLang: "페이지 번역 대상 언어",
+      pgTargetLangDesc: "페이지 번역의 대상 언어",
       featureSettings: "기능 설정",
       enableSelTrans: "선택 번역 활성화",
       enableSelTransDesc: "텍스트 선택 시 번역 버튼 표시",
@@ -154,10 +181,14 @@
       enableInputTransDesc: "입력 상자에 번역 버튼 표시",
       ignoreLangs: "제외 언어",
       ignoreLangsDesc: "이 언어의 텍스트는 번역하지 않습니다",
+      enablePageTrans: "페이지 번역 활성화",
+      enablePageTransDesc: "규칙에 일치하는 페이지 자동 번역",
       enableFloatBtn: "플로팅 버튼 활성화",
-      enableFloatBtnDesc: "페이지에 플로팅 번역 버튼 표시",
+      enableFloatBtnDesc: "지원 페이지에 플로팅 버튼 표시",
       enableContext: "컨텍스트 메뉴 활성화",
       enableContextDesc: "우클릭 메뉴에 번역 옵션 표시",
+      autoTranslate: "자동 번역",
+      autoTranslateDesc: "지원 사이트 방문 시 자동 번역",
       blacklistTitle: "페이지 번역 블랙리스트",
       blacklistDesc: "블랙리스트의 사이트는 페이지 번역이 제한됩니다. 선택 번역은 계속 사용 가능합니다",
       blacklistPlaceholder: "예: example.com 또는 *.example.com",
@@ -228,6 +259,57 @@
         break;
       }
     }
+  }
+
+  function renderBlacklist(blacklist, saveFn) {
+    const container = document.getElementById("blacklistContainer");
+    if (!container) return;
+    container.innerHTML = "";
+    if (!blacklist || !blacklist.length) {
+      const empty = document.createElement("div");
+      empty.className = "blacklist-empty";
+      empty.textContent = "No sites in blacklist";
+      empty.style.cssText = "color:#9ca3af;font-size:12px;padding:8px 0;";
+      container.appendChild(empty);
+      return;
+    }
+    const list = document.createElement("div");
+    list.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
+    blacklist.forEach((host) => {
+      const chip = document.createElement("div");
+      chip.className = "blacklist-chip";
+      chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid #fecaca;border-radius:14px;font-size:11px;color:#dc2626;background:#fef2f2;";
+      chip.innerHTML = `<span>${escHtml(host)}</span><button class="remove" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;">&times;</button>`;
+      chip.querySelector(".remove").addEventListener("click", () => {
+        const updated = blacklist.filter((h) => h !== host);
+        saveFn(updated);
+      });
+      list.appendChild(chip);
+    });
+    container.appendChild(list);
+  }
+
+  function renderRulesList(rules) {
+    const container = document.getElementById("rulesList");
+    if (!container) return;
+    container.innerHTML = "";
+    if (!rules || !rules.length) {
+      const empty = document.createElement("div");
+      empty.style.cssText = "color:#9ca3af;font-size:12px;padding:8px 0;";
+      empty.textContent = "No rules loaded";
+      container.appendChild(empty);
+      return;
+    }
+    const list = document.createElement("div");
+    list.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;padding-top:8px;";
+    rules.forEach((rule) => {
+      const chip = document.createElement("div");
+      chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid #e2e8f0;border-radius:14px;font-size:11px;color:#475569;background:#f8fafc;";
+      const autoTag = rule.autoTranslate ? '<span style="color:#059669;font-weight:600;">Auto</span>' : '<span style="color:#9ca3af;">Manual</span>';
+      chip.innerHTML = `<span style="font-weight:500;">${escHtml(rule.name)}</span>${autoTag}<span style="color:#94a3b8;">${escHtml(rule.urlPattern)}</span>`;
+      list.appendChild(chip);
+    });
+    container.appendChild(list);
   }
 
   const IGN_LANG_OPTIONS = [
@@ -313,16 +395,21 @@
     try {
       const r = await chrome.runtime.sendMessage({ action: "getSettings" });
       if (r && r.settings) settings = r.settings;
-    } catch {}
+    } catch { }
 
     populateSelect("selTL", settings.selTL || "en");
     populateSelect("inputTL", settings.inputTL || "en");
+    populateSelect("pgTL", settings.pgTL || "en");
 
     setEngineSelect("selEngine", settings.selEngine || "google");
     setEngineSelect("inputEngine", settings.inputEngine || "google");
+    setEngineSelect("pgEngine", settings.pgEngine || "google");
 
     document.getElementById("enSel").checked = settings.enSel !== false;
     document.getElementById("enInput").checked = settings.enInput !== false;
+    document.getElementById("enPage").checked = settings.enPage !== false;
+    document.getElementById("enFloat").checked = settings.enFloat !== false;
+    document.getElementById("autoTranslate").checked = settings.autoTranslate === true;
 
     renderIgnLangs(settings.ignLangs || [], (newIgnLangs) => {
       settings.ignLangs = newIgnLangs;
@@ -332,39 +419,75 @@
     const rulesUrlInput = document.getElementById("rulesUrl");
     if (rulesUrlInput) rulesUrlInput.value = settings.rulesUrl || "";
 
+    const onBlacklistChange = (newBL) => {
+      settings.blacklist = newBL;
+      save();
+      renderBlacklist(newBL, onBlacklistChange);
+    };
+    renderBlacklist(settings.blacklist || [], onBlacklistChange);
+
+    // 规则标签展示已禁用
+
     function save() {
       const newSettings = {
         selTL: document.getElementById("selTL").value,
         inputTL: document.getElementById("inputTL").value,
+        pgTL: document.getElementById("pgTL")?.value || "en",
         selEngine: document.getElementById("selEngine").value,
         inputEngine: document.getElementById("inputEngine").value,
+        pgEngine: document.getElementById("pgEngine")?.value || "google",
         enSel: document.getElementById("enSel").checked,
         enInput: document.getElementById("enInput").checked,
+        enPage: document.getElementById("enPage")?.checked ?? true,
+        enFloat: document.getElementById("enFloat")?.checked ?? true,
+        autoTranslate: document.getElementById("autoTranslate")?.checked ?? false,
         ignLangs: settings.ignLangs || [],
+        blacklist: settings.blacklist || [],
         rulesUrl: document.getElementById("rulesUrl")?.value || "",
       };
       chrome.runtime.sendMessage({ action: "saveSettings", settings: newSettings });
     }
 
-    ["selTL", "inputTL"].forEach((id) => {
-      document.getElementById(id).addEventListener("change", save);
+    ["selTL", "inputTL", "pgTL"].forEach((id) => {
+      document.getElementById(id)?.addEventListener("change", save);
     });
-    ["selEngine", "inputEngine"].forEach((id) => {
-      document.getElementById(id).addEventListener("change", save);
+    ["selEngine", "inputEngine", "pgEngine"].forEach((id) => {
+      document.getElementById(id)?.addEventListener("change", save);
     });
-    ["enSel", "enInput"].forEach((id) => {
-      document.getElementById(id).addEventListener("change", save);
+    ["enSel", "enInput", "enPage", "enFloat", "autoTranslate"].forEach((id) => {
+      document.getElementById(id)?.addEventListener("change", save);
     });
 
     document.getElementById("testSelEngine").addEventListener("click", () => testEngine("testSelEngine", "selEngine"));
     document.getElementById("testInputEngine").addEventListener("click", () => testEngine("testInputEngine", "inputEngine"));
+    document.getElementById("testPgEngine")?.addEventListener("click", () => testEngine("testPgEngine", "pgEngine"));
 
     if (rulesUrlInput) {
       rulesUrlInput.addEventListener("change", save);
     }
 
-    document.getElementById("refreshRules")?.addEventListener("click", () => {
-      const btn = document.getElementById("refreshRules");
+    const addBlacklistBtn = document.getElementById("addBlacklistBtn");
+    const blacklistInput = document.getElementById("blacklistInput");
+    if (addBlacklistBtn && blacklistInput) {
+      const addHost = () => {
+        const host = blacklistInput.value.trim();
+        if (!host) return;
+        if (!settings.blacklist) settings.blacklist = [];
+        if (!settings.blacklist.includes(host)) {
+          settings.blacklist.push(host);
+          save();
+          renderBlacklist(settings.blacklist, onBlacklistChange);
+        }
+        blacklistInput.value = "";
+      };
+      addBlacklistBtn.addEventListener("click", addHost);
+      blacklistInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") addHost();
+      });
+    }
+
+    document.getElementById("refreshRulesBtn")?.addEventListener("click", () => {
+      const btn = document.getElementById("refreshRulesBtn");
       const lang = getUILang();
       const strings = I18N[lang] || I18N.en;
       btn.disabled = true;
@@ -372,27 +495,28 @@
       chrome.runtime.sendMessage({ action: "refreshRules" }, (r) => {
         btn.disabled = false;
         if (r && r.rules) {
-          btn.textContent = strings.refreshRulesSuccess;
+          btn.textContent = "OK ✓";
+          renderRulesList(r.rules);
         } else {
-          btn.textContent = strings.refreshRulesFail;
+          btn.textContent = "Fail ✗";
         }
-        setTimeout(() => { btn.textContent = strings.refreshRulesBtn; }, 3000);
+        setTimeout(() => { btn.textContent = strings.refreshRulesBtn || "Refresh"; }, 3000);
       });
     });
   }
 
   initSettingsUI();
 
-  (function(){
-    var btns=document.querySelectorAll('.tab-btn');
-    var contents=document.querySelectorAll('.tab-content');
-    btns.forEach(function(btn){
-      btn.addEventListener('click',function(){
-        btns.forEach(function(b){b.classList.remove('tab-active');});
-        contents.forEach(function(c){c.classList.remove('tab-content-active');});
+  (function () {
+    var btns = document.querySelectorAll('.tab-btn');
+    var contents = document.querySelectorAll('.tab-content');
+    btns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        btns.forEach(function (b) { b.classList.remove('tab-active'); });
+        contents.forEach(function (c) { c.classList.remove('tab-content-active'); });
         btn.classList.add('tab-active');
-        var target=document.getElementById('tab-'+btn.getAttribute('data-tab'));
-        if(target)target.classList.add('tab-content-active');
+        var target = document.getElementById('tab-' + btn.getAttribute('data-tab'));
+        if (target) target.classList.add('tab-content-active');
       });
     });
   })();

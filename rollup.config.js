@@ -1,4 +1,5 @@
 import resolve from '@rollup/plugin-node-resolve';
+import json from '@rollup/plugin-json';
 
 const outputDir = 'Translate/static/js';
 
@@ -13,6 +14,6 @@ const inputs = ['content', 'background', 'options'];
 export default inputs.map((name) => ({
   input: `Translate/src/${name}/index.js`,
   output: { file: `${outputDir}/${name}.js`, format: 'iife', sourcemap: false },
-  plugins: [resolve()],
+  plugins: [resolve(), json()],
   onwarn,
 }));

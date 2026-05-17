@@ -58,7 +58,6 @@ export function getSelection() {
     let p = an.parentElement;
     while (p) {
       if (p.isContentEditable) { actInput = p; break; }
-      if (p.tagName === "INPUT" || p.tagName === "TEXTAREA") { actInput = p; break; }
       p = p.parentElement;
     }
   }
@@ -71,7 +70,7 @@ export function showToolbar(x, y, txt, isInput, S) {
 
   tBar = document.createElement("div");
   tBar.className = "tr-bar";
-  tBar.innerHTML = `<button class="tr-btn tr-primary" id="tr-translate-btn">${svgIcon("translate")}<span>翻译</span></button>`;
+  tBar.innerHTML = `<button class="tr-btn tr-primary tr-btn-icon" id="tr-translate-btn">${svgIcon("translate")}</button>`;
   document.body.appendChild(tBar);
 
   const defaultTL = isInput ? (S.inputTL || "en") : (S.selTL || "en");
@@ -109,7 +108,7 @@ export function showPanel(txt, tl, engine) {
   const langWrap = document.createElement("div");
   langWrap.className = "tr-plang";
 
-  const srcDD = buildDropdown("tr-panel-src", "auto", true, () => {}, true, panel);
+  const srcDD = buildDropdown("tr-panel-src", "auto", true, () => { }, true, panel);
   const arrow = document.createElement("span");
   arrow.className = "tr-arrow";
   arrow.textContent = "→";

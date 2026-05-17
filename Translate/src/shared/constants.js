@@ -74,13 +74,14 @@ export function detectTextLang(text) {
   if (/[\u0400-\u04ff]/.test(text)) return "ru";
   if (/[\u0600-\u06ff]/.test(text)) return "ar";
   if (/[\u0e00-\u0e7f]/.test(text)) return "th";
-  if (/[\u1a00-\u1a1f]/.test(text)) return "vi";
+  if (/[\u0100-\u01ef\u0300-\u033f]/.test(text)) return "vi";
   if (/[\u0900-\u097f]/.test(text)) return "hi";
   if (/[a-zA-Z]/.test(text)) return "en";
   return null;
 }
 
 export function escHtml(s) {
+  if (s == null) return "";
   const d = document.createElement("div");
   d.textContent = s;
   return d.innerHTML;
@@ -93,6 +94,18 @@ export function isIgnored(text, ignLangs) {
   return ignLangs.some((ign) => {
     if (ign === detected) return true;
     return ign.split("-")[0] === detected.split("-")[0];
+  });
+}
+
+export function isBlacklisted(hostname, blacklist) {
+  if (!Array.isArray(blacklist)) return false;
+  return blacklist.some((pattern) => {
+    if (typeof pattern !== "string") return false;
+    if (pattern.startsWith("*.")) {
+      const base = pattern.slice(2);
+      return hostname === base || hostname.endsWith("." + base);
+    }
+    return hostname === pattern || hostname.endsWith("." + pattern);
   });
 }
 

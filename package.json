@@ -7,7 +7,12 @@
     "build": "rollup -c"
   },
   "devDependencies": {
-    "rollup": "^4.0.0",
-    "@rollup/plugin-node-resolve": "^15.0.0"
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^15.0.0",
+    "rollup": "^4.0.0"
+  },
+  "dependencies": {
+    "javascript-obfuscator": "^5.4.2",
+    "webcrack": "^2.16.0"
   }
 }

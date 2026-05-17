@@ -75,15 +75,19 @@ export async function translateBing(text, sl, tl) {
       });
 
       if (!resp.ok) {
+        const err = new Error(`HTTP ${resp.status}`);
+        lastError = err;
         if (attempt === 0) { clearBingConfig(); continue; }
-        throw new Error(`HTTP ${resp.status}`);
+        throw err;
       }
 
       const data = await resp.json();
 
       if (data.ShowCaptcha || data.StatusCode === 401) {
+        const err = new Error(data.ShowCaptcha ? "Captcha required" : "Unauthorized");
+        lastError = err;
         if (attempt === 0) { clearBingConfig(); continue; }
-        throw new Error(data.ShowCaptcha ? "Captcha required" : "Unauthorized");
+        throw err;
       }
 
       if (!data || !data[0] || !data[0].translations || !data[0].translations[0]) {
@@ -93,7 +97,9 @@ export async function translateBing(text, sl, tl) {
       return data[0].translations[0].text;
     } catch (e) {
       lastError = e;
-      if (attempt === 1) throw lastError;
+      if (attempt === 0) { clearBingConfig(); continue; }
+      throw lastError;
     }
   }
+  throw lastError || new Error("Translation failed");
 }
