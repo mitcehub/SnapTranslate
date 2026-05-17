@@ -1,46 +1,46 @@
-# EZ-Translate
+# EZ-Translate — EZ-翻译
 
-A lightweight browser translation extension — select text on any page and translate it instantly.
+轻量级浏览器翻译扩展 — 选中文字即可即时翻译。
 
-> **Note:** This extension is not published on the Chrome Web Store or Edge Add-ons. You need to load it manually as an unpacked extension.
+> **注意：** 本扩展未发布到 Chrome Web Store 或 Edge 扩展商店，需要手动加载已解压的扩展。
 
-## Features
+## 功能
 
-- Select text → instantly translate (Google Translate / Bing)
-- Page translation support
-- Input box translation
-- Popup & options page
-- Timeline-style translation history
+- 划词翻译（Google 翻译 / Bing 翻译）
+- 页面全文翻译
+- 输入框翻译
+- 弹出窗口与选项页面
+- 时间线风格的翻译历史
 
-## Installation
+## 安装方法
 
 ### Chrome
 
-1. Download the latest `ez-translate-chrome.zip` from the [Releases page](https://github.com/mitcehub/EZ-Translate/releases)
-2. Unzip the archive to a folder
-3. Open `chrome://extensions/`
-4. Enable **Developer mode** (toggle in the top-right corner)
-5. Click **Load unpacked**
-6. Select the `Translate` folder from the unzipped archive
+1. 从 [Releases 页面](https://github.com/mitcehub/EZ-Translate/releases) 下载最新的 `ez-translate-chrome.zip`
+2. 解压到任意文件夹
+3. 地址栏输入 `chrome://extensions/`
+4. 开启右上角的 **开发者模式**
+5. 点击 **加载已解压的扩展程序**
+6. 选择解压后的 `Translate` 文件夹
 
 ### Edge
 
-1. Download the latest `ez-translate-edge.zip` from the [Releases page](https://github.com/mitcehub/EZ-Translate/releases)
-2. Unzip the archive to a folder
-3. Open `edge://extensions/`
-4. Enable **Developer mode** (toggle in the bottom-left corner)
-5. Click **Load unpacked**
-6. Select the `Translate` folder from the unzipped archive
+1. 从 [Releases 页面](https://github.com/mitcehub/EZ-Translate/releases) 下载最新的 `ez-translate-edge.zip`
+2. 解压到任意文件夹
+3. 地址栏输入 `edge://extensions/`
+4. 开启左下角的 **开发者模式**
+5. 点击 **加载扩展**
+6. 选择解压后的 `Translate` 文件夹
 
-## Build from Source
+## 自行构建
 
 ```bash
 npm ci
 npm run build
 ```
 
-The extension output is in the `Translate/` directory.
+构建产物在 `Translate/` 目录下。
 
-## License
+## 许可
 
 MIT
