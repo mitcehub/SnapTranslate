@@ -96,14 +96,11 @@ for (const mod of MODULES) {
   }
 }
 
-// Inject CSS - both content.css and options.css
-for (const [name, cssPathRel] of [['content.css', 'Translate/static/css/content.css'], ['options.css', 'Translate/static/css/options.css']]) {
-  const cssPath = resolve(ROOT, cssPathRel);
-  try {
-    const css = readFileSync(cssPath, 'utf-8').replace(/`/g, '\\`');
-    bundle += `\n// ===== CSS Injection (${name}) =====\n(function() { const s = document.createElement('style'); s.textContent = \`${css}\`; document.head.appendChild(s); })();\n`;
-  } catch { }
-}
+// Inject content.css (options.css is only loaded when settings panel opens)
+try {
+  const css = readFileSync(resolve(ROOT, 'Translate/static/css/content.css'), 'utf-8').replace(/`/g, '\\`');
+  bundle += `\n// ===== CSS Injection (content.css) =====\n(function() { const s = document.createElement('style'); s.textContent = \`${css}\`; document.head.appendChild(s); })();\n`;
+} catch { }
 
 // Inline PNG assets as data URIs
 const ASSETS_DIR = resolve(ROOT, 'Translate', 'assets');
@@ -123,6 +120,16 @@ const ASSETS = {
 
 // ===== Init =====
 initBackground();
+
+// Register menu command for settings
+if (typeof GM_registerMenuCommand !== 'undefined') {
+  GM_registerMenuCommand('⚙ EZ-Translate 设置', () => {
+    showOptionsPanel();
+  });
+  GM_registerMenuCommand('🌐 翻译页面', () => {
+    startPageTranslate();
+  });
+}
 
 // Wait for DOM then init content script
 if (document.readyState === 'loading') {

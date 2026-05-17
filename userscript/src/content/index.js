@@ -300,6 +300,7 @@ async function startPageTranslate() {
     siteRule = rr?.rule || null;
   } catch { }
   if (!siteRule) {
+    siteRule = GENERIC_RULE;
     statusEl = await showTransStatus("未匹配到网站规则，使用通用规则翻译");
   } else {
     statusEl = await showTransStatus(`匹配规则: ${siteRule.name}，开始翻译`);
