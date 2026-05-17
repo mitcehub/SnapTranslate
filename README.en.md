@@ -14,7 +14,15 @@ A lightweight browser translation extension — select text on any page and tran
 
 ## Installation
 
-### Chrome
+### Userscript (Recommended)
+
+Install [Tampermonkey](https://www.tampermonkey.net/) first, then open the link below:
+
+[**Install EZ-Translate Userscript**](userscript/dist/ez-translate.user.js)
+
+Or browse to `userscript/dist/ez-translate.user.js` and click "Raw" → "Install".
+
+### Chrome Extension
 
 1. Download the latest `ez-translate-chrome.zip` from the [Releases page](https://github.com/mitcehub/EZ-Translate/releases)
 2. Unzip the archive to a folder
@@ -23,7 +31,7 @@ A lightweight browser translation extension — select text on any page and tran
 5. Click **Load unpacked**
 6. Select the `Translate` folder from the unzipped archive
 
-### Edge
+### Edge Extension
 
 1. Download the latest `ez-translate-edge.zip` from the [Releases page](https://github.com/mitcehub/EZ-Translate/releases)
 2. Unzip the archive to a folder
