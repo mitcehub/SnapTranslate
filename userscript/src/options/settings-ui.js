@@ -319,6 +319,6 @@ async function initSettingsPanel(panel) {
   }
 
   panel.querySelector("[data-close]").addEventListener("click", () => {
-    panel.remove();
+    closeOptionsPanel();
   });
 }
