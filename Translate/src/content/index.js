@@ -16,6 +16,27 @@ const GENERIC_RULE = {
 
 const LS_PREFIX = "ez-translate:";
 
+function detectContentLang() {
+  const body = document.body;
+  if (!body) return '';
+  const sample = body.innerText.substring(0, 800);
+  const totalNonSpace = (sample.match(/[^\s]/g) || []).length;
+  if (totalNonSpace < 20) return '';
+  const zhChars = (sample.match(/[\u4e00-\u9fff]/g) || []).length;
+  const jaChars = (sample.match(/[\u3040-\u309f\u30a0-\u30ff]/g) || []).length;
+  const koChars = (sample.match(/[\uac00-\ud7af]/g) || []).length;
+  const ruChars = (sample.match(/[\u0400-\u04ff]/g) || []).length;
+  const arChars = (sample.match(/[\u0600-\u06ff]/g) || []).length;
+  const enChars = (sample.match(/[a-zA-Z]/g) || []).length;
+  if (zhChars / totalNonSpace > 0.15) return 'zh';
+  if (jaChars / totalNonSpace > 0.1) return 'ja';
+  if (koChars / totalNonSpace > 0.1) return 'ko';
+  if (ruChars / totalNonSpace > 0.15) return 'ru';
+  if (arChars / totalNonSpace > 0.15) return 'ar';
+  if (enChars / totalNonSpace > 0.3) return 'en';
+  return '';
+}
+
 function detectPageLang() {
   const htmlLang = document.documentElement?.getAttribute('lang') || '';
   if (htmlLang) return htmlLang.split('-')[0].toLowerCase();
@@ -26,31 +47,23 @@ function detectPageLang() {
     if (c) return c.split('-')[0].toLowerCase();
   }
 
-  const body = document.body;
-  if (body) {
-    const sample = body.innerText.substring(0, 500);
-    const zhChars = (sample.match(/[\u4e00-\u9fff]/g) || []).length;
-    const jaChars = (sample.match(/[\u3040-\u309f\u30a0-\u30ff]/g) || []).length;
-    const koChars = (sample.match(/[\uac00-\ud7af]/g) || []).length;
-    const totalNonSpace = (sample.match(/[^\s]/g) || []).length;
-    if (totalNonSpace > 20) {
-      if (zhChars / totalNonSpace > 0.15) return 'zh';
-      if (jaChars / totalNonSpace > 0.1) return 'ja';
-      if (koChars / totalNonSpace > 0.1) return 'ko';
-    }
-    if (/[\u0400-\u04ff]/.test(sample) && (sample.match(/[\u0400-\u04ff]/g) || []).length / totalNonSpace > 0.15) return 'ru';
-    if (/[\u0600-\u06ff]/.test(sample) && (sample.match(/[\u0600-\u06ff]/g) || []).length / totalNonSpace > 0.15) return 'ar';
-  }
-
-  return '';
+  return detectContentLang();
 }
 
-function isSameLang(pageLang, targetLang) {
-  if (!pageLang || !targetLang) return false;
-  const p = pageLang.split('-')[0].toLowerCase();
-  const t = targetLang.split('-')[0].toLowerCase();
-  if (p === t) return true;
-  if (t === 'zh' && (p === 'zh')) return true;
+function shouldSkipTranslation(targetLang) {
+  const declaredLang = detectPageLang();
+  const contentLang = detectContentLang();
+  const t = (targetLang || '').split('-')[0].toLowerCase();
+
+  if (!declaredLang && !contentLang) return false;
+
+  const declaredMatch = declaredLang && (declaredLang === t || (t === 'zh' && declaredLang === 'zh'));
+  const contentMatch = contentLang && (contentLang === t || (t === 'zh' && contentLang === 'zh'));
+
+  if (declaredMatch && contentMatch) return true;
+  if (declaredMatch && !contentMatch && contentLang) return false;
+  if (contentMatch) return true;
+
   return false;
 }
 function lsGet(key) {
@@ -130,8 +143,7 @@ async function handleSpaNavigation() {
   }
 
   const targetLang = S.pgTL || S.selTL;
-  const pageLang = detectPageLang();
-  if (isSameLang(pageLang, targetLang)) return;
+  if (shouldSkipTranslation(targetLang)) return;
 
   try {
     const resp = await sendMessage({ action: "getSiteRule", url: location.href });
@@ -415,8 +427,7 @@ async function init() {
   } catch { }
 
   const targetLang = S.pgTL || S.selTL;
-  const pageLang = detectPageLang();
-  pageLangDisabled = isSameLang(pageLang, targetLang);
+  pageLangDisabled = shouldSkipTranslation(targetLang);
 
   if (S.blacklist?.length) {
     isBlacklisted = checkBlacklist(location.hostname, S.blacklist);
@@ -446,20 +457,19 @@ async function init() {
   }
 
   if (S.enPage && !isBlacklisted && !pageLangDisabled) {
-    const skipAutoTranslate = isSameLang(pageLang, targetLang);
 
     try {
       const resp = await sendMessage({ action: "getSiteRule", url: location.href });
       if (resp?.rule) {
         siteRule = resp.rule;
-        if (S.autoTranslate && !isAutoBlacklisted && !skipAutoTranslate && siteRule.autoTranslate) {
+        if (S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
           pgTranslating = true;
           const st = await showTransStatus(`匹配规则: ${siteRule.name}，自动翻译`);
           await applyPageRule(siteRule, "auto", targetLang, S.pgEngine || "google");
           clearTransStatus(st);
           if (pgTranslating && float) float.classList.add("tr-translated");
         }
-      } else if (S.autoTranslate && !isAutoBlacklisted && !skipAutoTranslate) {
+      } else if (S.autoTranslate && !isAutoBlacklisted) {
         siteRule = GENERIC_RULE;
         const st = await showTransStatus("未匹配到规则，使用通用规则");
         await applyPageRule(GENERIC_RULE, "auto", targetLang, S.pgEngine || "google");
@@ -512,8 +522,7 @@ async function init() {
     if (changes.settings) {
       S = { ...S, ...changes.settings.newValue };
       const newTargetLang = S.pgTL || S.selTL;
-      const newPageLang = detectPageLang();
-      pageLangDisabled = isSameLang(newPageLang, newTargetLang);
+      pageLangDisabled = shouldSkipTranslation(newTargetLang);
       isBlacklisted = checkBlacklist(location.hostname, S.blacklist || []);
       isAutoBlacklisted = checkBlacklist(location.hostname, S.autoBlacklist || []);
       if (S.enFloat && !isBlacklisted && !pageLangDisabled && !sessionDisabled) createFloat();
