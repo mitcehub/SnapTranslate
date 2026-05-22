@@ -143,19 +143,21 @@ async function handleSpaNavigation() {
   }
 
   const targetLang = S.pgTL || S.selTL;
-  if (shouldSkipTranslation(targetLang)) return;
 
   try {
     const resp = await sendMessage({ action: "getSiteRule", url: location.href });
-    if (resp?.rule) {
-      siteRule = resp.rule;
-      if (S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
-        pgTranslating = true;
-        await applyPageRule(siteRule, "auto", targetLang, S.pgEngine || "google");
-        if (pgTranslating && float) float.classList.add("tr-translated");
-      }
-    }
+    siteRule = resp?.rule || null;
   } catch { }
+
+  if (!siteRule && shouldSkipTranslation(targetLang)) return;
+
+  if (siteRule) {
+    if (S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
+      pgTranslating = true;
+      await applyPageRule(siteRule, "auto", targetLang, S.pgEngine || "google");
+      if (pgTranslating && float) float.classList.add("tr-translated");
+    }
+  }
 }
 
 function loadFloatPos() {
@@ -254,7 +256,7 @@ function showDisableMenu() {
 }
 
 function createFloat() {
-  if (float || isBlacklisted || pageLangDisabled || sessionDisabled) return;
+  if (float || isBlacklisted || (!siteRule && pageLangDisabled) || sessionDisabled) return;
   loadFloatPos();
   float = document.createElement("div");
   float.className = "tr-float";
@@ -353,7 +355,7 @@ async function startPageTranslate() {
     showToast("此网站已在网页翻译黑名单中");
     return;
   }
-  if (pageLangDisabled) {
+  if (!siteRule && pageLangDisabled) {
     showToast("此页面语言与目标语言相同，无需翻译");
     return;
   }
@@ -427,7 +429,6 @@ async function init() {
   } catch { }
 
   const targetLang = S.pgTL || S.selTL;
-  pageLangDisabled = shouldSkipTranslation(targetLang);
 
   if (S.blacklist?.length) {
     isBlacklisted = checkBlacklist(location.hostname, S.blacklist);
@@ -452,30 +453,45 @@ async function init() {
     }
   });
 
-  if (S.enPage && !isBlacklisted && !pageLangDisabled && S.enFloat) {
-    createFloat();
+  if (isBlacklisted) {
+    ready = true;
+    chrome.runtime.onMessage.addListener((msg) => {
+      if (msg.action === "show-toast" && msg.msg) showToast(msg.msg);
+      if (msg.action === "page-translate") startPageTranslate();
+    });
+    chrome.storage.onChanged.addListener((changes) => {
+      if (changes.settings) {
+        S = { ...S, ...changes.settings.newValue };
+        isBlacklisted = checkBlacklist(location.hostname, S.blacklist || []);
+        isAutoBlacklisted = checkBlacklist(location.hostname, S.autoBlacklist || []);
+      }
+    });
+    return;
   }
 
-  if (S.enPage && !isBlacklisted && !pageLangDisabled) {
+  try {
+    const resp = await sendMessage({ action: "getSiteRule", url: location.href });
+    if (resp?.rule) siteRule = resp.rule;
+  } catch { }
 
-    try {
-      const resp = await sendMessage({ action: "getSiteRule", url: location.href });
-      if (resp?.rule) {
-        siteRule = resp.rule;
-        if (S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
-          pgTranslating = true;
-          const st = await showTransStatus(`匹配规则: ${siteRule.name}，自动翻译`);
-          await applyPageRule(siteRule, "auto", targetLang, S.pgEngine || "google");
-          clearTransStatus(st);
-          if (pgTranslating && float) float.classList.add("tr-translated");
-        }
-      } else if (S.autoTranslate && !isAutoBlacklisted) {
-        siteRule = GENERIC_RULE;
-        const st = await showTransStatus("未匹配到规则，使用通用规则");
-        await applyPageRule(GENERIC_RULE, "auto", targetLang, S.pgEngine || "google");
-        clearTransStatus(st);
-      }
-    } catch { }
+  if (siteRule) {
+    if (S.enPage && S.enFloat) createFloat();
+    if (S.enPage && S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
+      pgTranslating = true;
+      const st = await showTransStatus(`匹配规则: ${siteRule.name}，自动翻译`);
+      await applyPageRule(siteRule, "auto", targetLang, S.pgEngine || "google");
+      clearTransStatus(st);
+      if (pgTranslating && float) float.classList.add("tr-translated");
+    }
+  } else {
+    pageLangDisabled = shouldSkipTranslation(targetLang);
+    if (S.enPage && !pageLangDisabled && S.enFloat) createFloat();
+    if (S.enPage && !pageLangDisabled && S.autoTranslate && !isAutoBlacklisted) {
+      siteRule = GENERIC_RULE;
+      const st = await showTransStatus("未匹配到规则，使用通用规则");
+      await applyPageRule(GENERIC_RULE, "auto", targetLang, S.pgEngine || "google");
+      clearTransStatus(st);
+    }
   }
 
   ready = true;
@@ -525,7 +541,7 @@ async function init() {
       pageLangDisabled = shouldSkipTranslation(newTargetLang);
       isBlacklisted = checkBlacklist(location.hostname, S.blacklist || []);
       isAutoBlacklisted = checkBlacklist(location.hostname, S.autoBlacklist || []);
-      if (S.enFloat && !isBlacklisted && !pageLangDisabled && !sessionDisabled) createFloat();
+      if (S.enFloat && !isBlacklisted && (siteRule || !pageLangDisabled) && !sessionDisabled) createFloat();
       else removeFloat();
     }
   });
