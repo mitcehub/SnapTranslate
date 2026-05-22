@@ -52,7 +52,7 @@
       autoTranslate: "Auto Translate",
       autoTranslateDesc: "Automatically translate when visiting supported sites",
       blacklistTitle: "Page Translation Blacklist",
-      blacklistDesc: "Sites in this list cannot use page translation at all (auto & manual). Selection translation still works.",
+      blacklistDesc: "Sites in this list cannot use page translation at all (auto & manual). Pages matching the target language are automatically skipped. Selection translation still works.",
       blacklistPlaceholder: "e.g. example.com or *.example.com",
       autoBlacklistTitle: "Auto-Translate Blacklist",
       autoBlacklistDesc: "Sites in this list will not auto-translate, but you can still trigger it manually. Overridden by the page translation blacklist above.",
@@ -100,7 +100,7 @@
       autoTranslate: "自动翻译",
       autoTranslateDesc: "访问支持的网站时自动翻译",
       blacklistTitle: "网页翻译黑名单",
-      blacklistDesc: "列表中的网站无法使用网页翻译功能（自动和手动均不可用），划词翻译不受影响",
+      blacklistDesc: "列表中的网站完全禁用网页翻译（自动和手动均不可用），划词翻译不受影响。与目标语言相同的页面会自动跳过，无需手动添加",
       blacklistPlaceholder: "例如 example.com 或 *.example.com",
       autoBlacklistTitle: "自动翻译黑名单",
       autoBlacklistDesc: "列表中的网站不会自动翻译，但可手动触发翻译；受网页翻译黑名单约束，若同时在上面的黑名单中则手动也不可用",
@@ -148,7 +148,7 @@
       autoTranslate: "自動翻訳",
       autoTranslateDesc: "対応サイト訪問時に自動翻訳",
       blacklistTitle: "ページ翻訳ブラックリスト",
-      blacklistDesc: "このリストのサイトはページ翻訳機能を一切使用できません（自動・手動とも不可）。選択翻訳は引き続き使用できます",
+      blacklistDesc: "このリストのサイトはページ翻訳機能を一切使用できません（自動・手動とも不可）。対象言語と同じページは自動的にスキップされます。選択翻訳は引き続き使用できます",
       blacklistPlaceholder: "例: example.com または *.example.com",
       autoBlacklistTitle: "自動翻訳ブラックリスト",
       autoBlacklistDesc: "このリストのサイトは自動翻訳されませんが、手動でトリガーできます。上のページ翻訳ブラックリストが優先されます",
@@ -196,7 +196,7 @@
       autoTranslate: "자동 번역",
       autoTranslateDesc: "지원 사이트 방문 시 자동 번역",
       blacklistTitle: "페이지 번역 블랙리스트",
-      blacklistDesc: "이 목록의 사이트는 페이지 번역 기능을 사용할 수 없습니다 (자동/수동 모두 불가). 선택 번역은 계속 사용 가능합니다",
+      blacklistDesc: "이 목록의 사이트는 페이지 번역 기능을 사용할 수 없습니다 (자동/수동 모두 불가). 대상 언어와 같은 페이지는 자동으로 건너뜁니다. 선택 번역은 계속 사용 가능합니다",
       blacklistPlaceholder: "예: example.com 또는 *.example.com",
       autoBlacklistTitle: "자동 번역 블랙리스트",
       autoBlacklistDesc: "이 목록의 사이트는 자동 번역되지 않지만 수동으로 트리거할 수 있습니다. 위의 페이지 번역 블랙리스트가 우선됩니다",
@@ -405,34 +405,6 @@
       blacklistText.addEventListener("input", () => {
         settings.blacklist = blacklistText.value.split('\n').map(s => s.trim()).filter(Boolean);
         save();
-      });
-    }
-
-    const addChineseSitesBtn = document.getElementById("addChineseSitesBtn");
-    const chineseSitesStatus = document.getElementById("chineseSitesStatus");
-    if (addChineseSitesBtn && blacklistText) {
-      addChineseSitesBtn.addEventListener("click", () => {
-        const lines = blacklistText.value.split('\n').map(s => s.trim());
-        if (lines.some(l => l === 'chinese-sites.txt' || l === '@import chinese-sites.txt')) {
-          chineseSitesStatus.textContent = "已存在";
-          chineseSitesStatus.style.color = "#f59e0b";
-          return;
-        }
-        lines.push('chinese-sites.txt');
-        blacklistText.value = lines.join('\n');
-        settings.blacklist = lines.filter(Boolean);
-        save();
-        chineseSitesStatus.textContent = "已添加，正在验证...";
-        chineseSitesStatus.style.color = "#6366f1";
-        chrome.runtime.sendMessage({ action: "expandBlacklist" }, (r) => {
-          if (r?.count) {
-            chineseSitesStatus.textContent = `✓ 已加载 ${r.count} 个域名`;
-            chineseSitesStatus.style.color = "#22c55e";
-          } else {
-            chineseSitesStatus.textContent = "加载失败，请检查网络";
-            chineseSitesStatus.style.color = "#ef4444";
-          }
-        });
       });
     }
 

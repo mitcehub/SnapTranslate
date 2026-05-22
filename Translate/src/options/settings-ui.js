@@ -218,34 +218,6 @@ export async function initSettingsUI() {
     });
   }
 
-  const addChineseSitesBtn = document.getElementById("addChineseSitesBtn");
-  const chineseSitesStatus = document.getElementById("chineseSitesStatus");
-  if (addChineseSitesBtn && blacklistText) {
-    addChineseSitesBtn.addEventListener("click", () => {
-      const lines = blacklistText.value.split('\n').map(s => s.trim());
-      if (lines.some(l => l === 'chinese-sites.txt' || l === '@import chinese-sites.txt')) {
-        chineseSitesStatus.textContent = "已存在";
-        chineseSitesStatus.style.color = "#f59e0b";
-        return;
-      }
-      lines.push('chinese-sites.txt');
-      blacklistText.value = lines.join('\n');
-      settings.blacklist = lines.filter(Boolean);
-      save();
-      chineseSitesStatus.textContent = "已添加，正在验证...";
-      chineseSitesStatus.style.color = "#6366f1";
-      chrome.runtime.sendMessage({ action: "expandBlacklist" }, (r) => {
-        if (r?.count) {
-          chineseSitesStatus.textContent = `✓ 已加载 ${r.count} 个域名`;
-          chineseSitesStatus.style.color = "#22c55e";
-        } else {
-          chineseSitesStatus.textContent = "加载失败，请检查网络";
-          chineseSitesStatus.style.color = "#ef4444";
-        }
-      });
-    });
-  }
-
   const autoBlacklistText = document.getElementById("autoBlacklistText");
   if (autoBlacklistText) {
     autoBlacklistText.value = (settings.autoBlacklist || []).join('\n');

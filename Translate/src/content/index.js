@@ -80,6 +80,7 @@ let isBlacklisted = false;
 let isAutoBlacklisted = false;
 let sessionDisabled = false;
 let pgTranslating = false;
+let pageLangDisabled = false;
 let siteRule = null;
 let float = null;
 let floatPos = null;
@@ -201,7 +202,7 @@ function showDisableMenu() {
     { icon: svgIcon("eyeOff"), label: "下次打开", desc: "关闭本次，下次访问时重新显示", action: () => { removeFloat(); closeFloatMenu(); } },
     { icon: svgIcon("clock"), label: "临时禁用", desc: "本次会话中不再显示", action: () => { try { sessionStorage.setItem(LS_PREFIX + "tr-float-disabled", "1"); } catch { } removeFloat(); closeFloatMenu(); showToast("已临时禁用"); } },
     { icon: svgIcon("autoOff"), label: "禁用自动翻译", desc: "此网站不自动翻译，可手动点击翻译", action: async () => { const host = location.hostname; if (isAutoBlacklisted) { try { await sendMessage({ action: "removeAutoBlacklist", host }); } catch { } isAutoBlacklisted = false; showToast("已启用自动翻译"); } else { try { await sendMessage({ action: "addAutoBlacklist", host }); } catch { } isAutoBlacklisted = true; if (pgTranslating) revertPageTranslation(); showToast("已禁用自动翻译"); } closeFloatMenu(); } },
-    { icon: svgIcon("ban"), label: "永久禁用此网站", desc: "将此网站加入网页翻译黑名单", cls: "danger", action: async () => { const host = location.hostname; try { await sendMessage({ action: "addBlacklist", host }); } catch { } revertPageTranslation(); removeFloat(); closeFloatMenu(); showToast("已加入网页翻译黑名单"); } },
+    { icon: svgIcon("ban"), label: "永久禁用此网站", desc: "此网站完全禁用网页翻译", cls: "danger", action: async () => { const host = location.hostname; try { await sendMessage({ action: "addBlacklist", host }); } catch { } revertPageTranslation(); removeFloat(); closeFloatMenu(); showToast("已加入网页翻译黑名单"); } },
   ];
   items.forEach((it) => {
     const div = document.createElement("div");
@@ -241,7 +242,7 @@ function showDisableMenu() {
 }
 
 function createFloat() {
-  if (float || isBlacklisted || sessionDisabled) return;
+  if (float || isBlacklisted || pageLangDisabled || sessionDisabled) return;
   loadFloatPos();
   float = document.createElement("div");
   float.className = "tr-float";
@@ -340,6 +341,10 @@ async function startPageTranslate() {
     showToast("此网站已在网页翻译黑名单中");
     return;
   }
+  if (pageLangDisabled) {
+    showToast("此页面语言与目标语言相同，无需翻译");
+    return;
+  }
   if (pgTranslating) {
     revertPageTranslation();
     return;
@@ -409,10 +414,13 @@ async function init() {
     if (r && r.settings) S = { ...S, ...r.settings };
   } catch { }
 
-  try {
-    const r = await sendMessage({ action: "checkBlacklist", url: location.href });
-    if (r && r.blacklisted) isBlacklisted = true;
-  } catch { }
+  const targetLang = S.pgTL || S.selTL;
+  const pageLang = detectPageLang();
+  pageLangDisabled = isSameLang(pageLang, targetLang);
+
+  if (S.blacklist?.length) {
+    isBlacklisted = checkBlacklist(location.hostname, S.blacklist);
+  }
 
   if (S.autoBlacklist?.length) {
     isAutoBlacklisted = checkBlacklist(location.hostname, S.autoBlacklist);
@@ -433,13 +441,11 @@ async function init() {
     }
   });
 
-  if (S.enPage && !isBlacklisted && S.enFloat) {
+  if (S.enPage && !isBlacklisted && !pageLangDisabled && S.enFloat) {
     createFloat();
   }
 
-  if (S.enPage && !isBlacklisted) {
-    const targetLang = S.pgTL || S.selTL;
-    const pageLang = detectPageLang();
+  if (S.enPage && !isBlacklisted && !pageLangDisabled) {
     const skipAutoTranslate = isSameLang(pageLang, targetLang);
 
     try {
@@ -505,15 +511,12 @@ async function init() {
   chrome.storage.onChanged.addListener((changes) => {
     if (changes.settings) {
       S = { ...S, ...changes.settings.newValue };
-      const newBL = S.blacklist || [];
-      const wasBlacklisted = isBlacklisted;
-      isBlacklisted = checkBlacklist(location.hostname, newBL);
-      if (wasBlacklisted && !isBlacklisted) {
-        sessionDisabled = false;
-        try { sessionStorage.removeItem(LS_PREFIX + "tr-float-disabled"); } catch { }
-      }
+      const newTargetLang = S.pgTL || S.selTL;
+      const newPageLang = detectPageLang();
+      pageLangDisabled = isSameLang(newPageLang, newTargetLang);
+      isBlacklisted = checkBlacklist(location.hostname, S.blacklist || []);
       isAutoBlacklisted = checkBlacklist(location.hostname, S.autoBlacklist || []);
-      if (S.enFloat && !isBlacklisted && !sessionDisabled) createFloat();
+      if (S.enFloat && !isBlacklisted && !pageLangDisabled && !sessionDisabled) createFloat();
       else removeFloat();
     }
   });
