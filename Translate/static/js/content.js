@@ -1410,13 +1410,20 @@
       siteRule = resp?.rule || null;
     } catch { }
 
-    if (!siteRule && shouldSkipTranslation(targetLang)) return;
-
     if (siteRule) {
       if (S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
         pgTranslating = true;
         await applyPageRule(siteRule, "auto", targetLang, S.pgEngine || "google");
         if (pgTranslating && float) float.classList.add("tr-translated");
+      }
+    } else {
+      pageLangDisabled = shouldSkipTranslation(targetLang);
+      if (pageLangDisabled) return;
+      if (S.autoTranslate && !isAutoBlacklisted) {
+        siteRule = GENERIC_RULE;
+        const st = await showTransStatus("未匹配到规则，使用通用规则");
+        await applyPageRule(GENERIC_RULE, "auto", targetLang, S.pgEngine || "google");
+        clearTransStatus(st);
       }
     }
   }
@@ -1517,7 +1524,7 @@
   }
 
   function createFloat() {
-    if (float || isBlacklisted || (!siteRule && pageLangDisabled) || sessionDisabled) return;
+    if (float || isBlacklisted || (siteRule ? false : pageLangDisabled) || sessionDisabled) return;
     loadFloatPos();
     float = document.createElement("div");
     float.className = "tr-float";
