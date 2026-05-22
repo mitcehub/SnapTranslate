@@ -4,14 +4,22 @@ import { getSiteRules, matchRule, resetRulesCache, fetchRemoteRules, saveRemoteR
 import { isBlacklisted } from '../shared/constants.js';
 
 const remoteBlacklistCache = {};
+const BUILTIN_LISTS = {
+  "chinese-sites.txt": "https://raw.githubusercontent.com/mitcehub/EZ-Translate/main/Translate/assets/chinese-sites.txt",
+};
 
 async function expandBlacklist(blacklist) {
   if (!blacklist || !blacklist.length) return [];
   const result = [];
   for (const entry of blacklist) {
+    let url = null;
     if (entry.startsWith('@import ')) {
-      const url = entry.substring(8).trim();
-      if (!url) continue;
+      url = entry.substring(8).trim();
+    } else if (BUILTIN_LISTS[entry]) {
+      url = entry;
+    }
+    if (url) {
+      if (BUILTIN_LISTS[url]) url = BUILTIN_LISTS[url];
       let domains = remoteBlacklistCache[url];
       if (!domains) {
         try {

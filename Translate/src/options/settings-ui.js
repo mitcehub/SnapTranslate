@@ -221,15 +221,14 @@ export async function initSettingsUI() {
   const addChineseSitesBtn = document.getElementById("addChineseSitesBtn");
   const chineseSitesStatus = document.getElementById("chineseSitesStatus");
   if (addChineseSitesBtn && blacklistText) {
-    const CHINESE_SITES_URL = "https://raw.githubusercontent.com/mitcehub/EZ-Translate/main/Translate/assets/chinese-sites.txt";
     addChineseSitesBtn.addEventListener("click", () => {
       const lines = blacklistText.value.split('\n').map(s => s.trim());
-      if (lines.some(l => l === `@import ${CHINESE_SITES_URL}`)) {
+      if (lines.some(l => l === 'chinese-sites.txt' || l === '@import chinese-sites.txt')) {
         chineseSitesStatus.textContent = "已存在";
         chineseSitesStatus.style.color = "#f59e0b";
         return;
       }
-      lines.push(`@import ${CHINESE_SITES_URL}`);
+      lines.push('chinese-sites.txt');
       blacklistText.value = lines.join('\n');
       settings.blacklist = lines.filter(Boolean);
       save();
