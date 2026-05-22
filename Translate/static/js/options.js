@@ -269,34 +269,6 @@
     }
   }
 
-  function renderBlacklist(blacklist, saveFn) {
-    const container = document.getElementById("blacklistContainer");
-    if (!container) return;
-    container.innerHTML = "";
-    if (!blacklist || !blacklist.length) {
-      const empty = document.createElement("div");
-      empty.className = "blacklist-empty";
-      empty.textContent = "No sites in blacklist";
-      empty.style.cssText = "color:#9ca3af;font-size:12px;padding:8px 0;";
-      container.appendChild(empty);
-      return;
-    }
-    const list = document.createElement("div");
-    list.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
-    blacklist.forEach((host) => {
-      const chip = document.createElement("div");
-      chip.className = "blacklist-chip";
-      chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid #fecaca;border-radius:14px;font-size:11px;color:#dc2626;background:#fef2f2;";
-      chip.innerHTML = `<span>${escHtml(host)}</span><button class="remove" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;">&times;</button>`;
-      chip.querySelector(".remove").addEventListener("click", () => {
-        const updated = blacklist.filter((h) => h !== host);
-        saveFn(updated);
-      });
-      list.appendChild(chip);
-    });
-    container.appendChild(list);
-  }
-
   function renderRulesList(rules) {
     const container = document.getElementById("rulesList");
     if (!container) return;
@@ -396,33 +368,6 @@
     });
   }
 
-  function renderAutoBlacklist(autoBlacklist, saveFn) {
-    const container = document.getElementById("autoBlacklistContainer");
-    if (!container) return;
-    container.innerHTML = "";
-    if (!autoBlacklist || !autoBlacklist.length) {
-      const empty = document.createElement("div");
-      empty.className = "blacklist-empty";
-      empty.textContent = "No sites in blacklist";
-      empty.style.cssText = "color:#9ca3af;font-size:12px;padding:8px 0;";
-      container.appendChild(empty);
-      return;
-    }
-    const list = document.createElement("div");
-    list.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
-    autoBlacklist.forEach((host) => {
-      const chip = document.createElement("div");
-      chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid #e2e8f0;border-radius:14px;font-size:11px;color:#475569;background:#f8fafc;";
-      chip.innerHTML = `<span>${escHtml(host)}</span><button class="remove" style="border:none;background:none;color:#6b7280;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;">&times;</button>`;
-      chip.querySelector(".remove").addEventListener("click", () => {
-        const updated = autoBlacklist.filter((h) => h !== host);
-        saveFn(updated);
-      });
-      list.appendChild(chip);
-    });
-    container.appendChild(list);
-  }
-
   async function initSettingsUI() {
     applyI18N();
 
@@ -454,19 +399,52 @@
     const rulesUrlInput = document.getElementById("rulesUrl");
     if (rulesUrlInput) rulesUrlInput.value = settings.rulesUrl || "";
 
-    const onBlacklistChange = (newBL) => {
-      settings.blacklist = newBL;
-      save();
-      renderBlacklist(newBL, onBlacklistChange);
-    };
-    renderBlacklist(settings.blacklist || [], onBlacklistChange);
+    const blacklistText = document.getElementById("blacklistText");
+    if (blacklistText) {
+      blacklistText.value = (settings.blacklist || []).join('\n');
+      blacklistText.addEventListener("input", () => {
+        settings.blacklist = blacklistText.value.split('\n').map(s => s.trim()).filter(Boolean);
+        save();
+      });
+    }
 
-    const onAutoBlacklistChange = (newBL) => {
-      settings.autoBlacklist = newBL;
-      save();
-      renderAutoBlacklist(newBL, onAutoBlacklistChange);
-    };
-    renderAutoBlacklist(settings.autoBlacklist || [], onAutoBlacklistChange);
+    const addChineseSitesBtn = document.getElementById("addChineseSitesBtn");
+    const chineseSitesStatus = document.getElementById("chineseSitesStatus");
+    if (addChineseSitesBtn && blacklistText) {
+      const CHINESE_SITES_URL = "https://raw.githubusercontent.com/mitcehub/EZ-Translate/main/Translate/assets/chinese-sites.txt";
+      addChineseSitesBtn.addEventListener("click", () => {
+        const lines = blacklistText.value.split('\n').map(s => s.trim());
+        if (lines.some(l => l === `@import ${CHINESE_SITES_URL}`)) {
+          chineseSitesStatus.textContent = "已存在";
+          chineseSitesStatus.style.color = "#f59e0b";
+          return;
+        }
+        lines.push(`@import ${CHINESE_SITES_URL}`);
+        blacklistText.value = lines.join('\n');
+        settings.blacklist = lines.filter(Boolean);
+        save();
+        chineseSitesStatus.textContent = "已添加，正在验证...";
+        chineseSitesStatus.style.color = "#6366f1";
+        chrome.runtime.sendMessage({ action: "expandBlacklist" }, (r) => {
+          if (r?.count) {
+            chineseSitesStatus.textContent = `✓ 已加载 ${r.count} 个域名`;
+            chineseSitesStatus.style.color = "#22c55e";
+          } else {
+            chineseSitesStatus.textContent = "加载失败，请检查网络";
+            chineseSitesStatus.style.color = "#ef4444";
+          }
+        });
+      });
+    }
+
+    const autoBlacklistText = document.getElementById("autoBlacklistText");
+    if (autoBlacklistText) {
+      autoBlacklistText.value = (settings.autoBlacklist || []).join('\n');
+      autoBlacklistText.addEventListener("input", () => {
+        settings.autoBlacklist = autoBlacklistText.value.split('\n').map(s => s.trim()).filter(Boolean);
+        save();
+      });
+    }
 
     function save() {
       const newSettings = {
@@ -505,46 +483,6 @@
 
     if (rulesUrlInput) {
       rulesUrlInput.addEventListener("change", save);
-    }
-
-    const addBlacklistBtn = document.getElementById("addBlacklistBtn");
-    const blacklistInput = document.getElementById("blacklistInput");
-    if (addBlacklistBtn && blacklistInput) {
-      const addHost = () => {
-        const host = blacklistInput.value.trim();
-        if (!host) return;
-        if (!settings.blacklist) settings.blacklist = [];
-        if (!settings.blacklist.includes(host)) {
-          settings.blacklist.push(host);
-          save();
-          renderBlacklist(settings.blacklist, onBlacklistChange);
-        }
-        blacklistInput.value = "";
-      };
-      addBlacklistBtn.addEventListener("click", addHost);
-      blacklistInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") addHost();
-      });
-    }
-
-    const addAutoBLBtn = document.getElementById("addAutoBlacklistBtn");
-    const autoBLInput = document.getElementById("autoBlacklistInput");
-    if (addAutoBLBtn && autoBLInput) {
-      const addHost = () => {
-        const host = autoBLInput.value.trim();
-        if (!host) return;
-        if (!settings.autoBlacklist) settings.autoBlacklist = [];
-        if (!settings.autoBlacklist.includes(host)) {
-          settings.autoBlacklist.push(host);
-          save();
-          renderAutoBlacklist(settings.autoBlacklist, onAutoBlacklistChange);
-        }
-        autoBLInput.value = "";
-      };
-      addAutoBLBtn.addEventListener("click", addHost);
-      autoBLInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") addHost();
-      });
     }
 
     document.getElementById("refreshRulesBtn")?.addEventListener("click", () => {

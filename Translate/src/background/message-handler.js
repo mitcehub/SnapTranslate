@@ -3,6 +3,39 @@ import { getSettings, LANGS, ENGINES } from './settings.js';
 import { getSiteRules, matchRule, resetRulesCache, fetchRemoteRules, saveRemoteRules } from './rules-data.js';
 import { isBlacklisted } from '../shared/constants.js';
 
+const remoteBlacklistCache = {};
+
+async function expandBlacklist(blacklist) {
+  if (!blacklist || !blacklist.length) return [];
+  const result = [];
+  for (const entry of blacklist) {
+    if (entry.startsWith('@import ')) {
+      const url = entry.substring(8).trim();
+      if (!url) continue;
+      let domains = remoteBlacklistCache[url];
+      if (!domains) {
+        try {
+          const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
+          if (resp.ok) {
+            const text = await resp.text();
+            domains = text.split('\n').map(s => s.trim()).filter(s => s && !s.startsWith('#'));
+            remoteBlacklistCache[url] = domains;
+          }
+        } catch { }
+      }
+      if (domains) result.push(...domains);
+    } else {
+      result.push(entry);
+    }
+  }
+  return result;
+}
+
+async function checkBlacklistWithImport(hostname, blacklist) {
+  const expanded = await expandBlacklist(blacklist || []);
+  return isBlacklisted(hostname, expanded);
+}
+
 export function handleMessage(req, sender, respond) {
   if (req.action === "translate") {
     translate(req.text, req.sourceLang || "auto", req.targetLang || "en", req.engine)
@@ -64,11 +97,11 @@ export function handleMessage(req, sender, respond) {
   }
 
   if (req.action === "checkBlacklist") {
-    getSettings().then((s) => {
+    getSettings().then(async (s) => {
       let blacklisted = false;
       try {
         const hostname = new URL(req.url).hostname;
-        blacklisted = isBlacklisted(hostname, s.blacklist || []);
+        blacklisted = await checkBlacklistWithImport(hostname, s.blacklist || []);
       } catch { }
       respond({ blacklisted });
     });
@@ -95,6 +128,14 @@ export function handleMessage(req, sender, respond) {
         await chrome.storage.local.set({ settings: s });
       }
       respond({ success: true });
+    });
+    return true;
+  }
+
+  if (req.action === "expandBlacklist") {
+    getSettings().then(async (s) => {
+      const expanded = await expandBlacklist(s.blacklist || []);
+      respond({ expanded, count: expanded.length });
     });
     return true;
   }

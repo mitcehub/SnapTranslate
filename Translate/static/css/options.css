@@ -99,14 +99,15 @@ select:focus, input[type="text"]:focus {
 .test-btn:hover { background: #f3f4f6 }
 .test-btn.test-success { color: #22c55e; border-color: #bbf7d0 }
 .test-btn.test-fail { color: #ef4444; border-color: #fecaca }
-.blacklist-container { padding: 8px 0 }
-.blacklist-add { display: flex; gap: 8px; padding-top: 8px }
-.blacklist-add input { flex: 1; min-width: 0 }
-.add-btn {
-  height: 32px; padding: 0 14px; border: none; border-radius: 6px;
-  background: #6366f1; color: #fff; font-size: 12px; font-weight: 500;
-  cursor: pointer; white-space: nowrap
+.blacklist-textarea {
+  width: 100%; min-height: 80px; padding: 10px 12px;
+  border: 1px solid #e2e8f0; border-radius: 8px;
+  font-size: 13px; font-family: monospace; line-height: 1.6;
+  resize: vertical; outline: none; color: #1e293b;
+  background: #f8fafc; transition: border-color .15s
 }
+.blacklist-textarea:focus { border-color: #6366f1; background: #fff }
+.blacklist-textarea::placeholder { color: #94a3b8 }
 .add-btn:hover { background: #4f46e5 }
 .rules-list { padding-top: 4px }
 .text-input { min-width: 200px }

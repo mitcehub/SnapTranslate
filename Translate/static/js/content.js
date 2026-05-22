@@ -1274,6 +1274,44 @@
   };
 
   const LS_PREFIX = "ez-translate:";
+
+  function detectPageLang() {
+    const htmlLang = document.documentElement?.getAttribute('lang') || '';
+    if (htmlLang) return htmlLang.split('-')[0].toLowerCase();
+
+    const metaLang = document.querySelector('meta[http-equiv="content-language"]');
+    if (metaLang) {
+      const c = metaLang.getAttribute('content') || '';
+      if (c) return c.split('-')[0].toLowerCase();
+    }
+
+    const body = document.body;
+    if (body) {
+      const sample = body.innerText.substring(0, 500);
+      const zhChars = (sample.match(/[\u4e00-\u9fff]/g) || []).length;
+      const jaChars = (sample.match(/[\u3040-\u309f\u30a0-\u30ff]/g) || []).length;
+      const koChars = (sample.match(/[\uac00-\ud7af]/g) || []).length;
+      const totalNonSpace = (sample.match(/[^\s]/g) || []).length;
+      if (totalNonSpace > 20) {
+        if (zhChars / totalNonSpace > 0.15) return 'zh';
+        if (jaChars / totalNonSpace > 0.1) return 'ja';
+        if (koChars / totalNonSpace > 0.1) return 'ko';
+      }
+      if (/[\u0400-\u04ff]/.test(sample) && (sample.match(/[\u0400-\u04ff]/g) || []).length / totalNonSpace > 0.15) return 'ru';
+      if (/[\u0600-\u06ff]/.test(sample) && (sample.match(/[\u0600-\u06ff]/g) || []).length / totalNonSpace > 0.15) return 'ar';
+    }
+
+    return '';
+  }
+
+  function isSameLang(pageLang, targetLang) {
+    if (!pageLang || !targetLang) return false;
+    const p = pageLang.split('-')[0].toLowerCase();
+    const t = targetLang.split('-')[0].toLowerCase();
+    if (p === t) return true;
+    if (t === 'zh' && (p === 'zh')) return true;
+    return false;
+  }
   function lsGet(key) {
     try {
       const val = localStorage.getItem(LS_PREFIX + key);
@@ -1346,22 +1384,19 @@
       revertPageTranslation();
     }
 
+    const targetLang = S.pgTL || S.selTL;
+    const pageLang = detectPageLang();
+    if (isSameLang(pageLang, targetLang)) return;
+
     try {
       const resp = await sendMessage({ action: "getSiteRule", url: location.href });
       if (resp?.rule) {
         siteRule = resp.rule;
         if (S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
           pgTranslating = true;
-          const st = await showTransStatus(`匹配规则: ${siteRule.name}，自动翻译`);
-          await applyPageRule(siteRule, "auto", S.pgTL || S.selTL, S.pgEngine || "google");
-          clearTransStatus(st);
+          await applyPageRule(siteRule, "auto", targetLang, S.pgEngine || "google");
           if (pgTranslating && float) float.classList.add("tr-translated");
         }
-      } else if (S.autoTranslate && !isAutoBlacklisted) {
-        siteRule = GENERIC_RULE;
-        const st = await showTransStatus("未匹配到规则，使用通用规则", true);
-        await applyPageRule(GENERIC_RULE, "auto", S.pgTL || S.selTL, S.pgEngine || "google");
-        clearTransStatus(st);
       }
     } catch { }
   }
@@ -1659,21 +1694,25 @@
     }
 
     if (S.enPage && !isBlacklisted) {
+      const targetLang = S.pgTL || S.selTL;
+      const pageLang = detectPageLang();
+      const skipAutoTranslate = isSameLang(pageLang, targetLang);
+
       try {
         const resp = await sendMessage({ action: "getSiteRule", url: location.href });
         if (resp?.rule) {
           siteRule = resp.rule;
-          if (S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
+          if (S.autoTranslate && !isAutoBlacklisted && !skipAutoTranslate && siteRule.autoTranslate) {
             pgTranslating = true;
             const st = await showTransStatus(`匹配规则: ${siteRule.name}，自动翻译`);
-            await applyPageRule(siteRule, "auto", S.pgTL || S.selTL, S.pgEngine || "google");
+            await applyPageRule(siteRule, "auto", targetLang, S.pgEngine || "google");
             clearTransStatus(st);
             if (pgTranslating && float) float.classList.add("tr-translated");
           }
-        } else if (S.autoTranslate && !isAutoBlacklisted) {
+        } else if (S.autoTranslate && !isAutoBlacklisted && !skipAutoTranslate) {
           siteRule = GENERIC_RULE;
           const st = await showTransStatus("未匹配到规则，使用通用规则");
-          await applyPageRule(GENERIC_RULE, "auto", S.pgTL || S.selTL, S.pgEngine || "google");
+          await applyPageRule(GENERIC_RULE, "auto", targetLang, S.pgEngine || "google");
           clearTransStatus(st);
         }
       } catch { }

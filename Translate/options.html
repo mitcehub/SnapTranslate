@@ -183,12 +183,14 @@
           <span data-i18n="blacklistTitle">Blacklist</span>
         </div>
         <div class="row">
-          <div class="row-label"><span data-i18n="blacklistDesc">Sites in blacklist will not be auto-translated</span></div>
+          <div class="row-label"><span data-i18n="blacklistDesc">Sites in blacklist will not be translated at all, one per line</span></div>
         </div>
-        <div class="blacklist-container" id="blacklistContainer"></div>
-        <div class="row blacklist-add">
-          <input type="text" id="blacklistInput" placeholder="e.g. example.com or *.example.com" data-i18n-placeholder="blacklistPlaceholder">
-          <button class="add-btn" id="addBlacklistBtn" data-i18n="addBtn">Add</button>
+        <div class="row">
+          <textarea id="blacklistText" class="blacklist-textarea" rows="5" placeholder="example.com&#10;*.example.com&#10;@import https://raw.githubusercontent.com/.../chinese-sites.txt"></textarea>
+        </div>
+        <div class="row" style="padding-top:4px;">
+          <button class="test-btn" id="addChineseSitesBtn">+ 添加中文网站列表</button>
+          <span id="chineseSitesStatus" style="font-size:11px;color:#6b7280;margin-left:8px;"></span>
         </div>
       </div>
       <div class="section">
@@ -201,12 +203,10 @@
           <span data-i18n="autoBlacklistTitle">Auto-Translate Blacklist</span>
         </div>
         <div class="row">
-          <div class="row-label"><span data-i18n="autoBlacklistDesc">Sites in this list will not auto-translate, but manual translation still works</span></div>
+          <div class="row-label"><span data-i18n="autoBlacklistDesc">Sites in this list will not auto-translate, but manual translation still works, one per line</span></div>
         </div>
-        <div class="blacklist-container" id="autoBlacklistContainer"></div>
-        <div class="row blacklist-add">
-          <input type="text" id="autoBlacklistInput" placeholder="e.g. example.com or *.example.com" data-i18n-placeholder="blacklistPlaceholder">
-          <button class="add-btn" id="addAutoBlacklistBtn" data-i18n="addBtn">Add</button>
+        <div class="row">
+          <textarea id="autoBlacklistText" class="blacklist-textarea" rows="5" placeholder="example.com&#10;*.example.com&#10;github.com"></textarea>
         </div>
       </div>
       <div class="section">
