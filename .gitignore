@@ -3,6 +3,7 @@ node_modules/
 *.map
 *.bak
 spec/
+dist/
 Translate/node_modules/
 Translate/src/background/bundled-rules.js
 immersive-translate/

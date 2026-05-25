@@ -20,17 +20,22 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run build
+      - run: npm run build:all
 
       - name: Pack Chrome ZIP
         run: |
-          cd Translate
-          zip -r ../ez-translate-chrome.zip . -x "*.DS_Store" -x "*.git*" -x "node_modules/*"
+          cd dist/chrome
+          zip -r ../../ez-translate-chrome.zip . -x "*.DS_Store" -x "*.git*"
 
       - name: Pack Edge ZIP
         run: |
-          cd Translate
-          zip -r ../ez-translate-edge.zip . -x "*.DS_Store" -x "*.git*" -x "node_modules/*"
+          cd dist/chrome
+          zip -r ../../ez-translate-edge.zip . -x "*.DS_Store" -x "*.git*"
+
+      - name: Pack Firefox ZIP
+        run: |
+          cd dist/firefox
+          zip -r ../../ez-translate-firefox.zip . -x "*.DS_Store" -x "*.git*"
 
       - name: Get version
         id: version
@@ -44,6 +49,7 @@ jobs:
           files: |
             ez-translate-chrome.zip
             ez-translate-edge.zip
+            ez-translate-firefox.zip
           body: |
             ## 安装说明
 
@@ -61,6 +67,12 @@ jobs:
             4. 点击"加载扩展"
             5. 选择解压后的文件夹
 
-            > 💡 **提示：** 此方式无需签名，兼容所有 Chrome/Edge 版本。
+            ### Firefox 版本
+            1. 下载 `ez-translate-firefox.zip` 并解压
+            2. 地址栏输入 `about:debugging#/runtime/this-firefox`
+            3. 点击"临时载入附加组件"
+            4. 选择解压文件夹中的 `manifest.json`
+
+            > 💡 **提示：** Chrome/Edge 版本无需签名即可使用。Firefox 临时加载方式每次重启浏览器需重新加载。
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,77 @@
+{
+  "manifest_version": 3,
+  "name": "__MSG_name__",
+  "description": "__MSG_description__",
+  "default_locale": "en",
+  "version": "0.1.0",
+  "icons": {
+    "16": "assets/16.png",
+    "32": "assets/32.png",
+    "48": "assets/48.png",
+    "128": "assets/128.png"
+  },
+  "background": {
+    "scripts": ["static/js/background.js"]
+  },
+  "action": {
+    "default_icon": {
+      "16": "assets/16.png",
+      "32": "assets/32.png",
+      "48": "assets/48.png",
+      "128": "assets/128.png"
+    },
+    "default_title": "__MSG_name__"
+  },
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://translate.googleapis.com/*",
+    "https://www.bing.com/*"
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "static/js/content.js"
+      ],
+      "css": [
+        "static/css/content.css"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "resources": [
+        "assets/16.png",
+        "assets/32.png",
+        "assets/48.png",
+        "assets/128.png",
+        "assets/256.png",
+        "assets/dark-16.png",
+        "assets/dark-32.png",
+        "assets/dark-48.png",
+        "assets/dark-128.png",
+        "assets/dark-256.png",
+        "static/css/*"
+      ]
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "ez-translate@mitcehub.github.io",
+      "strict_min_version": "109.0"
+    }
+  }
+}
