@@ -1660,7 +1660,7 @@
       if (!sel) { clearAll(); return; }
       if (sel.isInput && !S.enInput) return;
       if (!sel.isInput && !S.enSel) return;
-      if (isIgnored(sel.text, S.ignLangs)) return;
+      if (!sel.isInput && isIgnored(sel.text, S.ignLangs)) return;
       showToolbar(getLastX(), getLastY(), sel.text, sel.isInput, S);
     }, 10);
   }, true);
