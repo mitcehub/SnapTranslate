@@ -48,17 +48,6 @@ export function handleMessage(req, sender, respond) {
     return true;
   }
 
-  if (req.action === "setTranslatedBadge") {
-    if (req.translated) {
-      chrome.action.setBadgeText({ text: "✓" });
-      chrome.action.setBadgeBackgroundColor({ color: "#059669" });
-    } else {
-      chrome.action.setBadgeText({ text: "" });
-    }
-    respond({ success: true });
-    return false;
-  }
-
   if (req.action === "openOptions") {
     chrome.runtime.openOptionsPage();
     respond({ success: true });

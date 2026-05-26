@@ -11,6 +11,16 @@ chrome.runtime.onMessage.addListener((req, sender, respond) => {
     checkUpdate().then((r) => respond(r));
     return true;
   }
+  if (req.action === "setTranslatedBadge") {
+    if (req.translated) {
+      chrome.action.setBadgeText({ text: "✓" });
+      chrome.action.setBadgeBackgroundColor({ color: "#059669" });
+    } else {
+      chrome.action.setBadgeText({ text: "" });
+    }
+    respond({ success: true });
+    return false;
+  }
   return handleMessage(req, sender, respond);
 });
 
@@ -48,6 +58,17 @@ function compareVersions(a, b) {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
+  try {
+    chrome.action.setBadgeText({ text: "✓" });
+  } catch(e) {
+    console.error("setBadgeText error:", e);
+  }
+  try {
+    chrome.action.setBadgeBackgroundColor({ color: "#059669" });
+  } catch(e) {
+    console.error("setBadgeBackgroundColor error:", e);
+  }
+  setTimeout(() => chrome.action.setBadgeText({ text: "" }), 5000);
   checkUpdate().catch(() => {});
 });
 
