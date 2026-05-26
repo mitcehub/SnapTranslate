@@ -49,14 +49,11 @@ export function handleMessage(req, sender, respond) {
   }
 
   if (req.action === "setTranslatedBadge") {
-    const tabId = sender.tab?.id;
-    if (tabId) {
-      if (req.translated) {
-        chrome.action.setBadgeText({ tabId, text: "ON" });
-        chrome.action.setBadgeBackgroundColor({ tabId, color: "#059669" });
-      } else {
-        chrome.action.setBadgeText({ tabId, text: "" });
-      }
+    if (req.translated) {
+      chrome.action.setBadgeText({ text: "✓" });
+      chrome.action.setBadgeBackgroundColor({ color: "#059669" });
+    } else {
+      chrome.action.setBadgeText({ text: "" });
     }
     respond({ success: true });
     return false;
