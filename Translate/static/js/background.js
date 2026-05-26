@@ -9012,6 +9012,20 @@
       return true;
     }
 
+    if (req.action === "setTranslatedBadge") {
+      const tabId = sender.tab?.id;
+      if (tabId) {
+        if (req.translated) {
+          chrome.action.setBadgeText({ tabId, text: "ON" });
+          chrome.action.setBadgeBackgroundColor({ tabId, color: "#059669" });
+        } else {
+          chrome.action.setBadgeText({ tabId, text: "" });
+        }
+      }
+      respond({ success: true });
+      return false;
+    }
+
     if (req.action === "openOptions") {
       chrome.runtime.openOptionsPage();
       respond({ success: true });

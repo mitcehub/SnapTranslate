@@ -154,6 +154,7 @@ async function handleSpaNavigation() {
       pgTranslating = true;
       await applyPageRule(siteRule, "auto", targetLang, S.pgEngine || "google");
       if (pgTranslating && float) float.classList.add("tr-translated");
+      updateToolbarIcon();
     }
   } else {
     pageLangDisabled = shouldSkipTranslation(targetLang);
@@ -163,6 +164,7 @@ async function handleSpaNavigation() {
       const st = await showTransStatus("未匹配到规则，使用通用规则");
       await applyPageRule(GENERIC_RULE, "auto", targetLang, S.pgEngine || "google");
       clearTransStatus(st);
+      updateToolbarIcon();
     }
   }
 }
@@ -198,6 +200,10 @@ function closeFloatMenu() {
   if (floatMenu) { floatMenu.remove(); floatMenu = null; }
 }
 
+function updateToolbarIcon() {
+  sendMessage({ action: "setTranslatedBadge", translated: pgTranslating });
+}
+
 function revertPageTranslation() {
   stopObserver();
   document.querySelectorAll("[data-ez-translated='page']").forEach((el) => {
@@ -212,6 +218,7 @@ function revertPageTranslation() {
   });
   pgTranslating = false;
   if (float) float.classList.remove("tr-translated");
+  updateToolbarIcon();
 }
 
 function showDisableMenu() {
@@ -386,6 +393,7 @@ async function startPageTranslate() {
   if (pgTranslating) {
     showToast("翻译完成 ✓");
     if (float) float.classList.add("tr-translated");
+    updateToolbarIcon();
   }
 }
 
@@ -445,9 +453,7 @@ async function init() {
     isAutoBlacklisted = checkBlacklist(location.hostname, S.autoBlacklist);
   }
 
-  try {
-    if (sessionStorage.getItem(LS_PREFIX + "tr-float-disabled") === "1") sessionDisabled = true;
-  } catch { }
+  updateToolbarIcon();
 
   setupSpaUrlDetection();
 
@@ -489,6 +495,7 @@ async function init() {
       await applyPageRule(siteRule, "auto", targetLang, S.pgEngine || "google");
       clearTransStatus(st);
       if (pgTranslating && float) float.classList.add("tr-translated");
+      updateToolbarIcon();
     }
   } else {
     pageLangDisabled = shouldSkipTranslation(targetLang);
@@ -498,6 +505,7 @@ async function init() {
       const st = await showTransStatus("未匹配到规则，使用通用规则");
       await applyPageRule(GENERIC_RULE, "auto", targetLang, S.pgEngine || "google");
       clearTransStatus(st);
+      updateToolbarIcon();
     }
   }
 
