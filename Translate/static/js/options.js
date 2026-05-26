@@ -51,6 +51,8 @@
       enableContextDesc: "Show translate options in right-click menu",
       autoTranslate: "Auto Translate",
       autoTranslateDesc: "Automatically translate when visiting supported sites",
+      allowRemoteTTS: "Allow Remote TTS",
+      allowRemoteTTSDesc: "Use Google TTS when browser speech synthesis fails",
       blacklistTitle: "Page Translation Blacklist",
       blacklistDesc: "Sites in this list cannot use page translation at all (auto & manual). Pages matching the target language are automatically skipped. Selection translation still works.",
       blacklistPlaceholder: "e.g. example.com or *.example.com",
@@ -99,6 +101,8 @@
       enableContextDesc: "在右键菜单中显示翻译选项",
       autoTranslate: "自动翻译",
       autoTranslateDesc: "访问支持的网站时自动翻译",
+      allowRemoteTTS: "允许远程语音合成",
+      allowRemoteTTSDesc: "浏览器语音合成失败时使用 Google TTS",
       blacklistTitle: "网页翻译黑名单",
       blacklistDesc: "列表中的网站完全禁用网页翻译（自动和手动均不可用），划词翻译不受影响。与目标语言相同的页面会自动跳过，无需手动添加",
       blacklistPlaceholder: "例如 example.com 或 *.example.com",
@@ -147,6 +151,8 @@
       enableContextDesc: "右クリックメニューに翻訳オプションを表示",
       autoTranslate: "自動翻訳",
       autoTranslateDesc: "対応サイト訪問時に自動翻訳",
+      allowRemoteTTS: "リモートTTSを許可",
+      allowRemoteTTSDesc: "ブラウザ音声合成が失敗した場合、Google TTSを使用",
       blacklistTitle: "ページ翻訳ブラックリスト",
       blacklistDesc: "このリストのサイトはページ翻訳機能を一切使用できません（自動・手動とも不可）。対象言語と同じページは自動的にスキップされます。選択翻訳は引き続き使用できます",
       blacklistPlaceholder: "例: example.com または *.example.com",
@@ -195,6 +201,8 @@
       enableContextDesc: "우클릭 메뉴에 번역 옵션 표시",
       autoTranslate: "자동 번역",
       autoTranslateDesc: "지원 사이트 방문 시 자동 번역",
+      allowRemoteTTS: "원격 TTS 허용",
+      allowRemoteTTSDesc: "브라우저 음성 합성 실패 시 Google TTS 사용",
       blacklistTitle: "페이지 번역 블랙리스트",
       blacklistDesc: "이 목록의 사이트는 페이지 번역 기능을 사용할 수 없습니다 (자동/수동 모두 불가). 대상 언어와 같은 페이지는 자동으로 건너뜁니다. 선택 번역은 계속 사용 가능합니다",
       blacklistPlaceholder: "예: example.com 또는 *.example.com",
@@ -390,6 +398,7 @@
     document.getElementById("enPage").checked = settings.enPage !== false;
     document.getElementById("enFloat").checked = settings.enFloat !== false;
     document.getElementById("autoTranslate").checked = settings.autoTranslate === true;
+    document.getElementById("allowRemoteTTS").checked = settings.allowRemoteTTS === true;
 
     renderIgnLangs(settings.ignLangs || [], (newIgnLangs) => {
       settings.ignLangs = newIgnLangs;
@@ -430,6 +439,7 @@
         enPage: document.getElementById("enPage")?.checked ?? true,
         enFloat: document.getElementById("enFloat")?.checked ?? true,
         autoTranslate: document.getElementById("autoTranslate")?.checked ?? false,
+        allowRemoteTTS: document.getElementById("allowRemoteTTS")?.checked ?? false,
         ignLangs: settings.ignLangs || [],
         blacklist: settings.blacklist || [],
         autoBlacklist: settings.autoBlacklist || [],
@@ -444,7 +454,7 @@
     ["selEngine", "inputEngine", "pgEngine"].forEach((id) => {
       document.getElementById(id)?.addEventListener("change", save);
     });
-    ["enSel", "enInput", "enPage", "enFloat", "autoTranslate"].forEach((id) => {
+    ["enSel", "enInput", "enPage", "enFloat", "autoTranslate", "allowRemoteTTS"].forEach((id) => {
       document.getElementById(id)?.addEventListener("change", save);
     });
 

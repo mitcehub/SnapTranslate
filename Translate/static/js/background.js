@@ -9121,14 +9121,13 @@
       return true;
     }
     if (req.action === "setTranslatedBadge") {
-      console.warn("[EZ] setTranslatedBadge received:", req.translated, "tab:", sender.tab?.id);
-      chrome.storage.local.set({ _badgeDebug: { translated: req.translated, time: Date.now(), tabId: sender.tab?.id } });
+      const tabId = sender.tab?.id;
       try {
         if (req.translated) {
-          chrome.action.setBadgeBackgroundColor({ color: [5, 150, 105, 255] });
-          chrome.action.setBadgeText({ text: "✓" }).catch(e => console.error("[EZ] setBadgeText failed:", e));
+          chrome.action.setBadgeBackgroundColor({ color: [5, 150, 105, 255], tabId });
+          chrome.action.setBadgeText({ text: "✓", tabId }).catch(e => console.error("[EZ] setBadgeText failed:", e));
         } else {
-          chrome.action.setBadgeText({ text: "" }).catch(e => console.error("[EZ] clear badge failed:", e));
+          chrome.action.setBadgeText({ text: "", tabId }).catch(e => console.error("[EZ] clear badge failed:", e));
         }
       } catch(e) {
         console.error("[EZ] setTranslatedBadge error:", e);

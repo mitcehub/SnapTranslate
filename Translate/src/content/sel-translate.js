@@ -1,4 +1,4 @@
-import { isIgnored, escHtml, sendMessage } from '../shared/constants.js';
+import { escHtml, sendMessage } from '../shared/constants.js';
 import { svgIcon } from './ui/icons.js';
 import { buildDropdown, buildEngineDropdown, position, positionPanel, closeDropdown, showToast, attachSpeakHandlers, attachCopyHandler } from './ui/components.js';
 import { isEditable, doReplace } from './input-translate.js';

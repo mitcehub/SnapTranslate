@@ -200,6 +200,7 @@ export async function initSettingsUI() {
   document.getElementById("enPage").checked = settings.enPage !== false;
   document.getElementById("enFloat").checked = settings.enFloat !== false;
   document.getElementById("autoTranslate").checked = settings.autoTranslate === true;
+  document.getElementById("allowRemoteTTS").checked = settings.allowRemoteTTS === true;
 
   renderIgnLangs(settings.ignLangs || [], (newIgnLangs) => {
     settings.ignLangs = newIgnLangs;
@@ -240,6 +241,7 @@ export async function initSettingsUI() {
       enPage: document.getElementById("enPage")?.checked ?? true,
       enFloat: document.getElementById("enFloat")?.checked ?? true,
       autoTranslate: document.getElementById("autoTranslate")?.checked ?? false,
+      allowRemoteTTS: document.getElementById("allowRemoteTTS")?.checked ?? false,
       ignLangs: settings.ignLangs || [],
       blacklist: settings.blacklist || [],
       autoBlacklist: settings.autoBlacklist || [],
@@ -254,7 +256,7 @@ export async function initSettingsUI() {
   ["selEngine", "inputEngine", "pgEngine"].forEach((id) => {
     document.getElementById(id)?.addEventListener("change", save);
   });
-  ["enSel", "enInput", "enPage", "enFloat", "autoTranslate"].forEach((id) => {
+  ["enSel", "enInput", "enPage", "enFloat", "autoTranslate", "allowRemoteTTS"].forEach((id) => {
     document.getElementById(id)?.addEventListener("change", save);
   });
 
