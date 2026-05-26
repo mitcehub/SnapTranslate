@@ -1462,7 +1462,7 @@
   }
 
   function updateToolbarIcon() {
-    sendMessage({ action: "setTranslatedBadge", translated: pgTranslating });
+    sendMessage({ action: "setTranslatedBadge", translated: pgTranslating }).catch(() => {});
   }
 
   function revertPageTranslation() {

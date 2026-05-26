@@ -9121,11 +9121,17 @@
       return true;
     }
     if (req.action === "setTranslatedBadge") {
-      if (req.translated) {
-        chrome.action.setBadgeText({ text: "✓" });
-        chrome.action.setBadgeBackgroundColor({ color: "#059669" });
-      } else {
-        chrome.action.setBadgeText({ text: "" });
+      console.warn("[EZ] setTranslatedBadge received:", req.translated, "tab:", sender.tab?.id);
+      chrome.storage.local.set({ _badgeDebug: { translated: req.translated, time: Date.now(), tabId: sender.tab?.id } });
+      try {
+        if (req.translated) {
+          chrome.action.setBadgeBackgroundColor({ color: [5, 150, 105, 255] });
+          chrome.action.setBadgeText({ text: "✓" }).catch(e => console.error("[EZ] setBadgeText failed:", e));
+        } else {
+          chrome.action.setBadgeText({ text: "" }).catch(e => console.error("[EZ] clear badge failed:", e));
+        }
+      } catch(e) {
+        console.error("[EZ] setTranslatedBadge error:", e);
       }
       respond({ success: true });
       return false;
@@ -9167,17 +9173,6 @@
   }
 
   chrome.runtime.onInstalled.addListener(() => {
-    try {
-      chrome.action.setBadgeText({ text: "✓" });
-    } catch(e) {
-      console.error("setBadgeText error:", e);
-    }
-    try {
-      chrome.action.setBadgeBackgroundColor({ color: "#059669" });
-    } catch(e) {
-      console.error("setBadgeBackgroundColor error:", e);
-    }
-    setTimeout(() => chrome.action.setBadgeText({ text: "" }), 5000);
     checkUpdate().catch(() => {});
   });
 
