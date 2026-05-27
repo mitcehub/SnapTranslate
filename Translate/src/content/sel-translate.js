@@ -70,7 +70,7 @@ export function showToolbar(x, y, txt, isInput, S) {
 
   tBar = document.createElement("div");
   tBar.className = "tr-bar";
-  tBar.innerHTML = `<button class="tr-btn tr-primary tr-btn-icon" id="tr-translate-btn">${svgIcon("translate")}</button>`;
+  tBar.insertAdjacentHTML('beforeend', `<button class="tr-btn tr-primary tr-btn-icon" id="tr-translate-btn">${svgIcon("translate")}</button>`);
   document.body.appendChild(tBar);
 
   const defaultTL = isInput ? (S.inputTL || "en") : (S.selTL || "en");
@@ -137,7 +137,7 @@ export function showPanel(txt, tl, engine) {
 
   const closeBtn = document.createElement("button");
   closeBtn.className = "tr-pclose";
-  closeBtn.innerHTML = svgIcon("close");
+  closeBtn.insertAdjacentHTML('beforeend', svgIcon("close"));
   closeBtn.addEventListener("click", () => clearAll());
 
   head.appendChild(langWrap);
@@ -145,10 +145,10 @@ export function showPanel(txt, tl, engine) {
 
   const body = document.createElement("div");
   body.className = "tr-pbody";
-  body.innerHTML = `
+  body.insertAdjacentHTML('beforeend', `
     <div class="tr-original">${escHtml(txt.substring(0, 200))}</div>
     <div class="tr-loading"><span class="tr-spinner"></span>Translating...</div>
-  `;
+  `);
 
   panel.appendChild(head);
   panel.appendChild(body);
@@ -197,25 +197,25 @@ async function doTranslate(txt, sl, tl, engine) {
       const body = panel.querySelector(".tr-pbody");
       const isInput = actInput && isEditable(actInput);
       const srcLang = sl || "auto";
-      body.innerHTML = `
+      body.textContent = ''; body.insertAdjacentHTML('beforeend', `
         <div class="tr-original"><span class="tr-original-text">${escHtml(txt.substring(0, 200))}</span><button class="tr-speak-btn" data-lang="${srcLang}">${svgIcon("volume")}</button></div>
         <div class="tr-result"><span class="tr-result-text">${escHtml(r.result)}</span><button class="tr-speak-btn" data-lang="${tl}">${svgIcon("volume")}</button></div>
         <div class="tr-actions">
           <button class="tr-copy-btn">${svgIcon("copy")}Copy</button>
           ${isInput ? `<button class="tr-replace-btn">${svgIcon("replace")}Replace</button>` : ""}
         </div>
-      `;
+      `);
       requestAnimationFrame(() => positionPanel(panel, tBar));
       attachSpeakHandlers(body);
       attachCopyHandler(body.querySelector(".tr-copy-btn"), r.result);
       const rpBtn = body.querySelector(".tr-replace-btn");
       if (rpBtn) rpBtn.addEventListener("click", () => { doReplace(r.result, actInput, selText, showToast); clearAll(); });
     } else if (!r.success && panel && loadingEl) {
-      loadingEl.outerHTML = `<div class="tr-result" style="color:#ef4444;">Translation failed: ${escHtml(r.error || "unknown error")}</div>`;
+      loadingEl.insertAdjacentHTML('afterend', `<div class="tr-result" style="color:#ef4444;">Translation failed: ${escHtml(r.error || "unknown error")}</div>`); loadingEl.remove();
       requestAnimationFrame(() => positionPanel(panel, tBar));
     }
   } catch (e) {
-    if (panel && loadingEl) loadingEl.outerHTML = `<div class="tr-result" style="color:#ef4444;">Error: ${escHtml(e.message)}</div>`;
+    if (panel && loadingEl) { loadingEl.insertAdjacentHTML('afterend', `<div class="tr-result" style="color:#ef4444;">Error: ${escHtml(e.message)}</div>`); loadingEl.remove(); }
     if (panel) requestAnimationFrame(() => positionPanel(panel, tBar));
   }
   busy = false;
@@ -227,6 +227,6 @@ async function reTranslate(txt, newTL, engine) {
   const srcBtn = panel.querySelector("#tr-panel-src");
   const sl = srcBtn ? srcBtn.dataset.code : "auto";
   const body = panel.querySelector(".tr-pbody");
-  body.innerHTML = `<div class="tr-original">${escHtml(txt.substring(0, 200))}</div><div class="tr-loading"><span class="tr-spinner"></span>Translating...</div>`;
+  body.textContent = ''; body.insertAdjacentHTML('beforeend', `<div class="tr-original">${escHtml(txt.substring(0, 200))}</div><div class="tr-loading"><span class="tr-spinner"></span>Translating...</div>`);
   doTranslate(txt, sl, newTL, engine || "google");
 }

@@ -205,9 +205,9 @@ export function attachCopyHandler(btn, text) {
   btn.addEventListener("click", async function () {
     try {
       await navigator.clipboard.writeText(text);
-      this.innerHTML = `${svgIcon("check")}Copied`;
+      this.textContent = ''; this.insertAdjacentHTML('beforeend', `${svgIcon("check")}Copied`);
       this.classList.add("copied");
-      setTimeout(() => { this.innerHTML = `${svgIcon("copy")}Copy`; this.classList.remove("copied"); }, 2000);
+      setTimeout(() => { this.textContent = ''; this.insertAdjacentHTML('beforeend', `${svgIcon("copy")}Copy`); this.classList.remove("copied"); }, 2000);
     } catch {}
   });
 }
