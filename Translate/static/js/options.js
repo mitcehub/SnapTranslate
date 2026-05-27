@@ -280,7 +280,7 @@
   function renderRulesList(rules) {
     const container = document.getElementById("rulesList");
     if (!container) return;
-    container.textContent = "";
+    container.innerHTML = "";
     if (!rules || !rules.length) {
       const empty = document.createElement("div");
       empty.style.cssText = "color:#9ca3af;font-size:12px;padding:8px 0;";
@@ -294,8 +294,7 @@
       const chip = document.createElement("div");
       chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid #e2e8f0;border-radius:14px;font-size:11px;color:#475569;background:#f8fafc;";
       const autoTag = rule.autoTranslate ? '<span style="color:#059669;font-weight:600;">Auto</span>' : '<span style="color:#9ca3af;">Manual</span>';
-      chip.textContent = '';
-      chip.insertAdjacentHTML('beforeend', `<span style="font-weight:500;">${escHtml(rule.name)}</span>${autoTag}<span style="color:#94a3b8;">${escHtml(rule.urlPattern)}</span>`);
+      chip.innerHTML = `<span style="font-weight:500;">${escHtml(rule.name)}</span>${autoTag}<span style="color:#94a3b8;">${escHtml(rule.urlPattern)}</span>`;
       list.appendChild(chip);
     });
     container.appendChild(list);
@@ -315,7 +314,7 @@
   function renderIgnLangs(ignLangs, onChange) {
     const container = document.getElementById("ignLangsContainer");
     if (!container) return;
-    container.textContent = "";
+    container.innerHTML = "";
     const wrap = document.createElement("div");
     wrap.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
     IGN_LANG_OPTIONS.forEach((l) => {
@@ -496,7 +495,7 @@
     chrome.runtime.sendMessage({ action: "checkUpdate" }, (r) => {
       btn.disabled = false;
       if (r?.hasUpdate) {
-        status.textContent = ''; status.insertAdjacentHTML('beforeend', `发现新版本 <a href="${r.url}" target="_blank">v${r.latest}</a>（当前 v${r.current}）`);
+        status.innerHTML = `发现新版本 <a href="${r.url}" target="_blank">v${r.latest}</a>（当前 v${r.current}）`;
       } else if (r?.error) {
         status.textContent = "检查失败: " + r.error;
       } else {

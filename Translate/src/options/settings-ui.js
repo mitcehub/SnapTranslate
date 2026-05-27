@@ -27,7 +27,7 @@ function setEngineSelect(id, selected) {
 function renderBlacklist(blacklist, saveFn) {
   const container = document.getElementById("blacklistContainer");
   if (!container) return;
-  container.textContent = "";
+  container.innerHTML = "";
   if (!blacklist || !blacklist.length) {
     const empty = document.createElement("div");
     empty.className = "blacklist-empty";
@@ -42,8 +42,7 @@ function renderBlacklist(blacklist, saveFn) {
     const chip = document.createElement("div");
     chip.className = "blacklist-chip";
     chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid #fecaca;border-radius:14px;font-size:11px;color:#dc2626;background:#fef2f2;";
-    chip.textContent = '';
-    chip.insertAdjacentHTML('beforeend', `<span>${escHtml(host)}</span><button class="remove" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;">&times;</button>`);
+    chip.innerHTML = `<span>${escHtml(host)}</span><button class="remove" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;">&times;</button>`;
     chip.querySelector(".remove").addEventListener("click", () => {
       const updated = blacklist.filter((h) => h !== host);
       saveFn(updated);
@@ -56,7 +55,7 @@ function renderBlacklist(blacklist, saveFn) {
 function renderRulesList(rules) {
   const container = document.getElementById("rulesList");
   if (!container) return;
-  container.textContent = "";
+  container.innerHTML = "";
   if (!rules || !rules.length) {
     const empty = document.createElement("div");
     empty.style.cssText = "color:#9ca3af;font-size:12px;padding:8px 0;";
@@ -70,8 +69,7 @@ function renderRulesList(rules) {
     const chip = document.createElement("div");
     chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid #e2e8f0;border-radius:14px;font-size:11px;color:#475569;background:#f8fafc;";
     const autoTag = rule.autoTranslate ? '<span style="color:#059669;font-weight:600;">Auto</span>' : '<span style="color:#9ca3af;">Manual</span>';
-    chip.textContent = '';
-    chip.insertAdjacentHTML('beforeend', `<span style="font-weight:500;">${escHtml(rule.name)}</span>${autoTag}<span style="color:#94a3b8;">${escHtml(rule.urlPattern)}</span>`);
+    chip.innerHTML = `<span style="font-weight:500;">${escHtml(rule.name)}</span>${autoTag}<span style="color:#94a3b8;">${escHtml(rule.urlPattern)}</span>`;
     list.appendChild(chip);
   });
   container.appendChild(list);
@@ -91,7 +89,7 @@ const IGN_LANG_OPTIONS = [
 function renderIgnLangs(ignLangs, onChange) {
   const container = document.getElementById("ignLangsContainer");
   if (!container) return;
-  container.textContent = "";
+  container.innerHTML = "";
   const wrap = document.createElement("div");
   wrap.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
   IGN_LANG_OPTIONS.forEach((l) => {
@@ -156,7 +154,7 @@ function testEngine(btnId, engineId) {
 function renderAutoBlacklist(autoBlacklist, saveFn) {
   const container = document.getElementById("autoBlacklistContainer");
   if (!container) return;
-  container.textContent = "";
+  container.innerHTML = "";
   if (!autoBlacklist || !autoBlacklist.length) {
     const empty = document.createElement("div");
     empty.className = "blacklist-empty";
@@ -170,8 +168,7 @@ function renderAutoBlacklist(autoBlacklist, saveFn) {
   autoBlacklist.forEach((host) => {
     const chip = document.createElement("div");
     chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid #e2e8f0;border-radius:14px;font-size:11px;color:#475569;background:#f8fafc;";
-    chip.textContent = '';
-    chip.insertAdjacentHTML('beforeend', `<span>${escHtml(host)}</span><button class="remove" style="border:none;background:none;color:#6b7280;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;">&times;</button>`);
+    chip.innerHTML = `<span>${escHtml(host)}</span><button class="remove" style="border:none;background:none;color:#6b7280;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;">&times;</button>`;
     chip.querySelector(".remove").addEventListener("click", () => {
       const updated = autoBlacklist.filter((h) => h !== host);
       saveFn(updated);
