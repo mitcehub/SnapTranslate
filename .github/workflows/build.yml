@@ -1,0 +1,59 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Create Chrome ZIP
+        run: |
+          cd Translate
+          zip -r ../ez-translate-chrome.zip . -x "src/**" ".DS_Store"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: EZ-Translate ${{ github.ref_name }}
+          body: |
+            ## EZ-Translate ${{ github.ref_name }}
+
+            ### Chrome / Edge 浏览器安装说明
+
+            1. 下载 `ez-translate-chrome.zip` 并解压到一个文件夹中
+            2. 在 Chrome / Edge 地址栏输入 `chrome://extensions/` 回车（Edge 用 `edge://extensions/`）
+            3. 打开右上角的 **开发者模式**
+            4. 点击 **加载已解压的扩展程序**
+            5. 选择刚才解压的文件夹，点击确定
+            6. 扩展已安装成功！工具栏会出现翻译图标
+
+            > **注意**：每次更新版本需要先移除旧版本，再重新加载新版本
+
+            ### Firefox 版本
+
+            Firefox 版本正在审核中，审核完成后将在此 Release 页面提供下载。
+          draft: false
+          files: |
+            ez-translate-chrome.zip
