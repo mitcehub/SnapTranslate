@@ -1,6 +1,6 @@
 import { isOwn, showToast, closeDropdown, positionPanel, attachSpeakHandlers, attachCopyHandler } from './ui/components.js';
 import { svgIcon } from './ui/icons.js';
-import { escHtml, sendMessage, isIgnored, isBlacklisted as checkBlacklist, setHTML } from '../shared/constants.js';
+import { escHtml, sendMessage, isIgnored, isBlacklisted as checkBlacklist } from '../shared/constants.js';
 import { isEditable, doReplace } from './input-translate.js';
 import { getSelection, showToolbar, showPanel, clearAll, setTBar, setPanel, setLastX, setLastY, getLastX, getLastY, startPanelTimer } from './sel-translate.js';
 import { applyPageRule, stopObserver } from './page-translate.js';
@@ -235,7 +235,7 @@ function showDisableMenu() {
   items.forEach((it) => {
     const div = document.createElement("div");
     div.className = "tr-float-menu-item" + (it.cls ? " " + it.cls : "");
-    setHTML(div, it.icon + `<div class="tr-menu-text"><span class="tr-menu-label">${it.label}</span><span class="tr-menu-desc">${it.desc}</span></div>`);
+    div.insertAdjacentHTML('beforeend', it.icon + `<div class="tr-menu-text"><span class="tr-menu-label">${it.label}</span><span class="tr-menu-desc">${it.desc}</span></div>`);
     div.addEventListener("click", (ev) => { ev.stopPropagation(); it.action(); });
     floatMenu.appendChild(div);
   });
@@ -244,7 +244,7 @@ function showDisableMenu() {
   floatMenu.appendChild(sep);
   const settingsItem = document.createElement("div");
   settingsItem.className = "tr-float-menu-item";
-  setHTML(settingsItem, svgIcon("settings") + `<div class="tr-menu-text"><span class="tr-menu-label">设置</span></div>`);
+  settingsItem.insertAdjacentHTML('beforeend', svgIcon("settings") + `<div class="tr-menu-text"><span class="tr-menu-label">设置</span></div>`);
   settingsItem.addEventListener("click", (ev) => { ev.stopPropagation(); sendMessage({ action: "openOptions" }); closeFloatMenu(); });
   floatMenu.appendChild(settingsItem);
   document.body.appendChild(floatMenu);
@@ -280,11 +280,11 @@ function createFloat() {
   float.appendChild(img);
   const check = document.createElement("div");
   check.className = "tr-float-check";
-  setHTML(check, svgIcon("check"));
+  check.insertAdjacentHTML('beforeend', svgIcon("check"));
   float.appendChild(check);
   const xBtn = document.createElement("div");
   xBtn.className = "tr-float-x";
-  setHTML(xBtn, svgIcon("close"));
+  xBtn.insertAdjacentHTML('beforeend', svgIcon("close"));
   float.appendChild(xBtn);
   float.title = "Translate this page";
   if (pgTranslating) float.classList.add("tr-translated");
@@ -524,11 +524,11 @@ async function init() {
       setPanel(panel);
       const head = document.createElement("div");
       head.className = "tr-phead";
-      setHTML(head, `<div class="tr-plang"><span style="font-size:11px;color:#6b7280">→ ${escHtml(msg.tl || '')}</span></div><button class="tr-pclose">${svgIcon("close")}</button>`);
+      head.insertAdjacentHTML('beforeend', `<div class="tr-plang"><span style="font-size:11px;color:#6b7280">→ ${escHtml(msg.tl || '')}</span></div><button class="tr-pclose">${svgIcon("close")}</button>`);
       head.querySelector(".tr-pclose").addEventListener("click", () => clearAll());
       const body = document.createElement("div");
       body.className = "tr-pbody";
-      setHTML(body, `<div class="tr-original"><span class="tr-original-text">${escHtml((msg.text || "").substring(0, 200))}</span><button class="tr-speak-btn" data-lang="auto">${svgIcon("volume")}</button></div><div class="tr-result"><span class="tr-result-text">${escHtml(msg.result)}</span><button class="tr-speak-btn" data-lang="${escHtml(msg.tl || '')}">${svgIcon("volume")}</button></div><div class="tr-actions"><button class="tr-copy-btn">${svgIcon("copy")}Copy</button></div>`);
+      body.insertAdjacentHTML('beforeend', `<div class="tr-original"><span class="tr-original-text">${escHtml((msg.text || "").substring(0, 200))}</span><button class="tr-speak-btn" data-lang="auto">${svgIcon("volume")}</button></div><div class="tr-result"><span class="tr-result-text">${escHtml(msg.result)}</span><button class="tr-speak-btn" data-lang="${escHtml(msg.tl || '')}">${svgIcon("volume")}</button></div><div class="tr-actions"><button class="tr-copy-btn">${svgIcon("copy")}Copy</button></div>`);
       attachCopyHandler(body.querySelector(".tr-copy-btn"), msg.result);
       attachSpeakHandlers(body);
       panel.appendChild(head);

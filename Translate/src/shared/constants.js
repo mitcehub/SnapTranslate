@@ -112,13 +112,3 @@ export function isBlacklisted(hostname, blacklist) {
 export function sendMessage(msg) {
   return chrome.runtime.sendMessage(msg);
 }
-
-export function setHTML(el, html) {
-  el.textContent = '';
-  el.appendChild(document.createRange().createContextualFragment(html));
-}
-
-export function replaceOuterHTML(el, html) {
-  const fragment = document.createRange().createContextualFragment(html);
-  el.parentNode.replaceChild(fragment, el);
-}
