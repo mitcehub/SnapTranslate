@@ -8,7 +8,7 @@ zip.getEntries().filter(e => e.name.endsWith('.map')).forEach(e => zip.deleteFil
 const mf = JSON.parse(zip.getEntry('manifest.json').getData().toString('utf-8'));
 delete mf.background.service_worker;
 mf.background = { scripts: ['static/js/background.js'] };
-mf.browser_specific_settings = { gecko: { id: 'ez-translate@mitcehub.github.io', data_collection_permissions: { required: {} } } };
+mf.browser_specific_settings = { gecko: { id: 'ez-translate@mitcehub.github.io', data_collection_permissions: { required: [] } } };
 zip.updateFile('manifest.json', Buffer.from(JSON.stringify(mf, null, 2), 'utf-8'));
 
 // Post-process built JS to bypass innerHTML linter
