@@ -4,10 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "rollup -c",
-    "build:chrome": "node scripts/build.mjs chrome",
-    "build:firefox": "node scripts/build.mjs firefox",
-    "build:all": "node scripts/build.mjs"
+    "build": "rollup -c"
   },
   "devDependencies": {
     "@rollup/plugin-json": "^6.1.0",
