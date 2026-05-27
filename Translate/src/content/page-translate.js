@@ -1,7 +1,7 @@
 import { IGNORE_TAGS, sendMessage } from '../shared/constants.js';
 import { buildExcludeSet, shouldSkipText, shouldSkipElement, shouldSkipByVisibility, applySemanticMarkers, STAY_ORIGINAL_TAGS } from './universal-rules.js';
 
-const MARKER = 'data-ez-translated';
+const MARKER = 'data-snap-translated';
 const MAX_TEXT_LENGTH_PER_REQUEST = 1800;
 const MAX_TEXT_GROUP_LENGTH = 50;
 const SCROLL_LIMIT_SCREENS = 1;
@@ -17,7 +17,7 @@ function injectRuleCss(cssRules) {
   injectedCssCache.add(key);
   try {
     const style = document.createElement('style');
-    style.setAttribute('data-ez-css', '');
+    style.setAttribute('data-snap-css', '');
     style.textContent = cssRules.join('\n');
     document.head.appendChild(style);
   } catch { }
@@ -26,7 +26,7 @@ function injectRuleCss(cssRules) {
 function applyGlobalStyles(styles) {
   if (!styles) return;
   try {
-    const styleId = 'ez-global-styles';
+    const styleId = 'snap-global-styles';
     if (document.getElementById(styleId)) return;
     const css = Object.entries(styles)
       .map(([sel, rules]) => `${sel} { ${rules} }`)
@@ -353,7 +353,7 @@ async function translateNodes(nodes, sl, tl, engine, languageFilter) {
       const span = document.createElement('span');
       span.textContent = text;
       span.setAttribute(MARKER, 'page');
-      span.setAttribute('data-ez-original', original);
+      span.setAttribute('data-snap-original', original);
       node.parentNode.replaceChild(span, node);
       translated++;
     }
@@ -388,7 +388,7 @@ async function translateNodes(nodes, sl, tl, engine, languageFilter) {
             const span = document.createElement('span');
             span.textContent = resultText;
             span.setAttribute(MARKER, 'page');
-            span.setAttribute('data-ez-original', original);
+            span.setAttribute('data-snap-original', original);
             placeholder.parentNode.replaceChild(span, placeholder);
             translated++;
           }

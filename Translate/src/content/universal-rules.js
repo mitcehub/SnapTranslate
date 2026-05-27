@@ -30,7 +30,7 @@ const UNIVERSAL_EXCLUDE_SELECTORS = [
   "table.processedcode",
   "[value=ka]",
   "times",
-  "[data-ez-translated]",
+  "[data-snap-translated]",
   "[data-click-id]",
   "#immersive-translate-popup",
   "#immersive-translate-float-ball",

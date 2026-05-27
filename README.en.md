@@ -1,4 +1,4 @@
-# EZ-Translate
+# SnapTranslate
 
 A lightweight browser translation extension.
 
@@ -15,8 +15,8 @@ A lightweight browser translation extension.
 
 ### Load Unpacked (Development)
 
-1. Clone: `git clone https://github.com/mitcehub/EZ-Translate.git`
-2. Install: `cd EZ-Translate && npm install`
+1. Clone: `git clone https://github.com/mitcehub/SnapTranslate.git`
+2. Install: `cd SnapTranslate && npm install`
 3. Build: `npm run build`
 4. Open Chrome → `chrome://extensions`
 5. Enable "Developer mode"
@@ -24,6 +24,6 @@ A lightweight browser translation extension.
 
 ### Install from Release
 
-1. Download the latest `.zip` from [Releases](https://github.com/mitcehub/EZ-Translate/releases)
+1. Download the latest `.zip` from [Releases](https://github.com/mitcehub/SnapTranslate/releases)
 2. Extract to a local directory
 3. Chrome → `chrome://extensions` → Developer mode → Load unpacked → Select the extracted directory

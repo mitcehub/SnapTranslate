@@ -652,7 +652,7 @@
     "table.processedcode",
     "[value=ka]",
     "times",
-    "[data-ez-translated]",
+    "[data-snap-translated]",
     "[data-click-id]",
     "#immersive-translate-popup",
     "#immersive-translate-float-ball",
@@ -745,7 +745,7 @@
     return false;
   }
 
-  const MARKER = 'data-ez-translated';
+  const MARKER = 'data-snap-translated';
   const MAX_TEXT_LENGTH_PER_REQUEST = 1800;
   const MAX_TEXT_GROUP_LENGTH = 50;
   const TRANSLATION_CACHE_KEY_PREFIX = 'tr-cache:';
@@ -760,7 +760,7 @@
     injectedCssCache.add(key);
     try {
       const style = document.createElement('style');
-      style.setAttribute('data-ez-css', '');
+      style.setAttribute('data-snap-css', '');
       style.textContent = cssRules.join('\n');
       document.head.appendChild(style);
     } catch { }
@@ -769,7 +769,7 @@
   function applyGlobalStyles(styles) {
     if (!styles) return;
     try {
-      const styleId = 'ez-global-styles';
+      const styleId = 'snap-global-styles';
       if (document.getElementById(styleId)) return;
       const css = Object.entries(styles)
         .map(([sel, rules]) => `${sel} { ${rules} }`)
@@ -1059,7 +1059,7 @@
         const span = document.createElement('span');
         span.textContent = text;
         span.setAttribute(MARKER, 'page');
-        span.setAttribute('data-ez-original', original);
+        span.setAttribute('data-snap-original', original);
         node.parentNode.replaceChild(span, node);
         translated++;
       }
@@ -1094,7 +1094,7 @@
               const span = document.createElement('span');
               span.textContent = resultText;
               span.setAttribute(MARKER, 'page');
-              span.setAttribute('data-ez-original', original);
+              span.setAttribute('data-snap-original', original);
               placeholder.parentNode.replaceChild(span, placeholder);
               translated++;
             }
@@ -1318,7 +1318,7 @@
     translateUI: false,
   };
 
-  const LS_PREFIX = "ez-translate:";
+  const LS_PREFIX = "snap-translate:";
 
   function detectContentLang() {
     const body = document.body;
@@ -1507,15 +1507,15 @@
 
   function revertPageTranslation() {
     stopObserver();
-    document.querySelectorAll("[data-ez-translated='page']").forEach((el) => {
-      if (el.hasAttribute('data-ez-original')) {
-        const original = el.getAttribute('data-ez-original');
+    document.querySelectorAll("[data-snap-translated='page']").forEach((el) => {
+      if (el.hasAttribute('data-snap-original')) {
+        const original = el.getAttribute('data-snap-original');
         const textNode = document.createTextNode(original);
         el.parentNode.replaceChild(textNode, el);
       }
     });
-    document.querySelectorAll("[data-ez-translated='fixed']").forEach((el) => {
-      el.removeAttribute("data-ez-translated");
+    document.querySelectorAll("[data-snap-translated='fixed']").forEach((el) => {
+      el.removeAttribute("data-snap-translated");
     });
     pgTranslating = false;
     if (float) float.classList.remove("tr-translated");

@@ -1,4 +1,4 @@
-# EZ-Translate
+# SnapTranslate
 
 轻量级浏览器划词翻译扩展。
 
@@ -15,8 +15,8 @@
 
 ### 从源码加载（开发模式）
 
-1. 克隆仓库：`git clone https://github.com/mitcehub/EZ-Translate.git`
-2. 安装依赖：`cd EZ-Translate && npm install`
+1. 克隆仓库：`git clone https://github.com/mitcehub/SnapTranslate.git`
+2. 安装依赖：`cd SnapTranslate && npm install`
 3. 构建：`npm run build`
 4. 打开 Chrome → `chrome://extensions`
 5. 开启「开发者模式」
@@ -24,6 +24,6 @@
 
 ### 从 Release 安装
 
-1. 前往 [Releases](https://github.com/mitcehub/EZ-Translate/releases) 下载最新 `.zip`
+1. 前往 [Releases](https://github.com/mitcehub/SnapTranslate/releases) 下载最新 `.zip`
 2. 解压到本地目录
 3. Chrome → `chrome://extensions` → 开发者模式 → 加载已解压的扩展程序 → 选择解压后的目录

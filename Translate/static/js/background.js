@@ -9125,12 +9125,12 @@
       try {
         if (req.translated) {
           chrome.action.setBadgeBackgroundColor({ color: [5, 150, 105, 255], tabId });
-          chrome.action.setBadgeText({ text: "✓", tabId }).catch(e => console.error("[EZ] setBadgeText failed:", e));
+          chrome.action.setBadgeText({ text: "✓", tabId }).catch(e => console.error("[Snap] setBadgeText failed:", e));
         } else {
-          chrome.action.setBadgeText({ text: "", tabId }).catch(e => console.error("[EZ] clear badge failed:", e));
+          chrome.action.setBadgeText({ text: "", tabId }).catch(e => console.error("[Snap] clear badge failed:", e));
         }
       } catch(e) {
-        console.error("[EZ] setTranslatedBadge error:", e);
+        console.error("[Snap] setTranslatedBadge error:", e);
       }
       respond({ success: true });
       return false;
@@ -9142,7 +9142,7 @@
 
   async function checkUpdate() {
     try {
-      const resp = await fetch("https://api.github.com/repos/mitcehub/EZ-Translate/releases/latest", {
+      const resp = await fetch("https://api.github.com/repos/mitcehub/SnapTranslate/releases/latest", {
         signal: AbortSignal.timeout(10000),
       });
       if (!resp.ok) return { hasUpdate: false, error: "HTTP " + resp.status };

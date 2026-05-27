@@ -31,18 +31,18 @@ jobs:
       - name: Create Chrome ZIP
         run: |
           cd Translate
-          zip -r ../ez-translate-chrome.zip . -x "src/**" ".DS_Store"
+          zip -r ../snap-translate-chrome.zip . -x "src/**" ".DS_Store"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: EZ-Translate ${{ github.ref_name }}
+          name: SnapTranslate ${{ github.ref_name }}
           body: |
-            ## EZ-Translate ${{ github.ref_name }}
+            ## SnapTranslate ${{ github.ref_name }}
 
             ### Chrome / Edge 浏览器安装说明
 
-            1. 下载 `ez-translate-chrome.zip` 并解压到一个文件夹中
+            1. 下载 `snap-translate-chrome.zip` 并解压到一个文件夹中
             2. 在 Chrome / Edge 地址栏输入 `chrome://extensions/` 回车（Edge 用 `edge://extensions/`）
             3. 打开右上角的 **开发者模式**
             4. 点击 **加载已解压的扩展程序**
@@ -56,4 +56,4 @@ jobs:
             Firefox 版本正在审核中，审核完成后将在此 Release 页面提供下载。
           draft: false
           files: |
-            ez-translate-chrome.zip
+            snap-translate-chrome.zip
