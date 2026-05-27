@@ -1,4 +1,4 @@
-import { LANGS, ENGINES, escHtml } from '../../shared/constants.js';
+import { LANGS, ENGINES, escHtml, setHTML } from '../../shared/constants.js';
 import { svgIcon } from './icons.js';
 import { speak, stopSpeak } from '../../shared/tts.js';
 
@@ -205,9 +205,9 @@ export function attachCopyHandler(btn, text) {
   btn.addEventListener("click", async function () {
     try {
       await navigator.clipboard.writeText(text);
-      this.textContent = ''; this.insertAdjacentHTML('beforeend', `${svgIcon("check")}Copied`);
+      setHTML(this, `${svgIcon("check")}Copied`);
       this.classList.add("copied");
-      setTimeout(() => { this.textContent = ''; this.insertAdjacentHTML('beforeend', `${svgIcon("copy")}Copy`); this.classList.remove("copied"); }, 2000);
+      setTimeout(() => { setHTML(this, `${svgIcon("copy")}Copy`); this.classList.remove("copied"); }, 2000);
     } catch {}
   });
 }

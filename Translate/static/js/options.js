@@ -13,6 +13,11 @@
     return d.innerHTML;
   }
 
+  function setHTML(el, html) {
+    el.textContent = '';
+    el.appendChild(document.createRange().createContextualFragment(html));
+  }
+
   function makeLangNames(names) {
     return LANG_CODES.map((code) => ({ code, name: names[code] || code }));
   }
@@ -294,8 +299,7 @@
       const chip = document.createElement("div");
       chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid #e2e8f0;border-radius:14px;font-size:11px;color:#475569;background:#f8fafc;";
       const autoTag = rule.autoTranslate ? '<span style="color:#059669;font-weight:600;">Auto</span>' : '<span style="color:#9ca3af;">Manual</span>';
-      chip.textContent = '';
-      chip.insertAdjacentHTML('beforeend', `<span style="font-weight:500;">${escHtml(rule.name)}</span>${autoTag}<span style="color:#94a3b8;">${escHtml(rule.urlPattern)}</span>`);
+      setHTML(chip, `<span style="font-weight:500;">${escHtml(rule.name)}</span>${autoTag}<span style="color:#94a3b8;">${escHtml(rule.urlPattern)}</span>`);
       list.appendChild(chip);
     });
     container.appendChild(list);
@@ -496,7 +500,7 @@
     chrome.runtime.sendMessage({ action: "checkUpdate" }, (r) => {
       btn.disabled = false;
       if (r?.hasUpdate) {
-        status.textContent = ''; status.insertAdjacentHTML('beforeend', `发现新版本 <a href="${r.url}" target="_blank">v${r.latest}</a>（当前 v${r.current}）`);
+        setHTML(status, `发现新版本 <a href="${r.url}" target="_blank">v${r.latest}</a>（当前 v${r.current}）`);
       } else if (r?.error) {
         status.textContent = "检查失败: " + r.error;
       } else {

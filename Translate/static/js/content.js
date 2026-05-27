@@ -83,6 +83,16 @@
     return chrome.runtime.sendMessage(msg);
   }
 
+  function setHTML(el, html) {
+    el.textContent = '';
+    el.appendChild(document.createRange().createContextualFragment(html));
+  }
+
+  function replaceOuterHTML(el, html) {
+    const fragment = document.createRange().createContextualFragment(html);
+    el.parentNode.replaceChild(fragment, el);
+  }
+
   const icons = {
     translate: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="1.5" width="17" height="17" rx="3.5"/><path d="M6.5 11.5l3.5-6 3.5 6"/><path d="M8 10h4"/></svg>',
     copy: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -360,9 +370,9 @@
     btn.addEventListener("click", async function () {
       try {
         await navigator.clipboard.writeText(text);
-        this.textContent = ''; this.insertAdjacentHTML('beforeend', `${svgIcon("check")}Copied`);
+        setHTML(this, `${svgIcon("check")}Copied`);
         this.classList.add("copied");
-        setTimeout(() => { this.textContent = ''; this.insertAdjacentHTML('beforeend', `${svgIcon("copy")}Copy`); this.classList.remove("copied"); }, 2000);
+        setTimeout(() => { setHTML(this, `${svgIcon("copy")}Copy`); this.classList.remove("copied"); }, 2000);
       } catch {}
     });
   }
@@ -461,7 +471,7 @@
 
     tBar = document.createElement("div");
     tBar.className = "tr-bar";
-    tBar.insertAdjacentHTML('beforeend', `<button class="tr-btn tr-primary tr-btn-icon" id="tr-translate-btn">${svgIcon("translate")}</button>`);
+    setHTML(tBar, `<button class="tr-btn tr-primary tr-btn-icon" id="tr-translate-btn">${svgIcon("translate")}</button>`);
     document.body.appendChild(tBar);
 
     const defaultTL = isInput ? (S.inputTL || "en") : (S.selTL || "en");
@@ -528,7 +538,7 @@
 
     const closeBtn = document.createElement("button");
     closeBtn.className = "tr-pclose";
-    closeBtn.insertAdjacentHTML('beforeend', svgIcon("close"));
+    setHTML(closeBtn, svgIcon("close"));
     closeBtn.addEventListener("click", () => clearAll());
 
     head.appendChild(langWrap);
@@ -536,7 +546,7 @@
 
     const body = document.createElement("div");
     body.className = "tr-pbody";
-    body.insertAdjacentHTML('beforeend', `
+    setHTML(body, `
     <div class="tr-original">${escHtml(txt.substring(0, 200))}</div>
     <div class="tr-loading"><span class="tr-spinner"></span>Translating...</div>
   `);
@@ -586,7 +596,7 @@
         const body = panel.querySelector(".tr-pbody");
         const isInput = actInput && isEditable(actInput);
         const srcLang = sl || "auto";
-        body.textContent = ''; body.insertAdjacentHTML('beforeend', `
+        setHTML(body, `
         <div class="tr-original"><span class="tr-original-text">${escHtml(txt.substring(0, 200))}</span><button class="tr-speak-btn" data-lang="${srcLang}">${svgIcon("volume")}</button></div>
         <div class="tr-result"><span class="tr-result-text">${escHtml(r.result)}</span><button class="tr-speak-btn" data-lang="${tl}">${svgIcon("volume")}</button></div>
         <div class="tr-actions">
@@ -600,11 +610,11 @@
         const rpBtn = body.querySelector(".tr-replace-btn");
         if (rpBtn) rpBtn.addEventListener("click", () => { doReplace(r.result, actInput, selText, showToast); clearAll(); });
       } else if (!r.success && panel && loadingEl) {
-        loadingEl.insertAdjacentHTML('afterend', `<div class="tr-result" style="color:#ef4444;">Translation failed: ${escHtml(r.error || "unknown error")}</div>`); loadingEl.remove();
+        replaceOuterHTML(loadingEl, `<div class="tr-result" style="color:#ef4444;">Translation failed: ${escHtml(r.error || "unknown error")}</div>`);
         requestAnimationFrame(() => positionPanel(panel, tBar));
       }
     } catch (e) {
-      if (panel && loadingEl) { loadingEl.insertAdjacentHTML('afterend', `<div class="tr-result" style="color:#ef4444;">Error: ${escHtml(e.message)}</div>`); loadingEl.remove(); }
+      if (panel && loadingEl) { replaceOuterHTML(loadingEl, `<div class="tr-result" style="color:#ef4444;">Error: ${escHtml(e.message)}</div>`); }
       if (panel) requestAnimationFrame(() => positionPanel(panel, tBar));
     }
     busy = false;
@@ -616,7 +626,7 @@
     const srcBtn = panel.querySelector("#tr-panel-src");
     const sl = srcBtn ? srcBtn.dataset.code : "auto";
     const body = panel.querySelector(".tr-pbody");
-    body.textContent = ''; body.insertAdjacentHTML('beforeend', `<div class="tr-original">${escHtml(txt.substring(0, 200))}</div><div class="tr-loading"><span class="tr-spinner"></span>Translating...</div>`);
+    setHTML(body, `<div class="tr-original">${escHtml(txt.substring(0, 200))}</div><div class="tr-loading"><span class="tr-spinner"></span>Translating...</div>`);
     doTranslate(txt, sl, newTL, engine || "google");
   }
 
@@ -1536,7 +1546,7 @@
     items.forEach((it) => {
       const div = document.createElement("div");
       div.className = "tr-float-menu-item" + (it.cls ? " " + it.cls : "");
-      div.insertAdjacentHTML('beforeend', it.icon + `<div class="tr-menu-text"><span class="tr-menu-label">${it.label}</span><span class="tr-menu-desc">${it.desc}</span></div>`);
+      setHTML(div, it.icon + `<div class="tr-menu-text"><span class="tr-menu-label">${it.label}</span><span class="tr-menu-desc">${it.desc}</span></div>`);
       div.addEventListener("click", (ev) => { ev.stopPropagation(); it.action(); });
       floatMenu.appendChild(div);
     });
@@ -1545,7 +1555,7 @@
     floatMenu.appendChild(sep);
     const settingsItem = document.createElement("div");
     settingsItem.className = "tr-float-menu-item";
-    settingsItem.insertAdjacentHTML('beforeend', svgIcon("settings") + `<div class="tr-menu-text"><span class="tr-menu-label">设置</span></div>`);
+    setHTML(settingsItem, svgIcon("settings") + `<div class="tr-menu-text"><span class="tr-menu-label">设置</span></div>`);
     settingsItem.addEventListener("click", (ev) => { ev.stopPropagation(); sendMessage({ action: "openOptions" }); closeFloatMenu(); });
     floatMenu.appendChild(settingsItem);
     document.body.appendChild(floatMenu);
@@ -1581,11 +1591,11 @@
     float.appendChild(img);
     const check = document.createElement("div");
     check.className = "tr-float-check";
-    check.insertAdjacentHTML('beforeend', svgIcon("check"));
+    setHTML(check, svgIcon("check"));
     float.appendChild(check);
     const xBtn = document.createElement("div");
     xBtn.className = "tr-float-x";
-    xBtn.insertAdjacentHTML('beforeend', svgIcon("close"));
+    setHTML(xBtn, svgIcon("close"));
     float.appendChild(xBtn);
     float.title = "Translate this page";
     if (pgTranslating) float.classList.add("tr-translated");
@@ -1825,11 +1835,11 @@
         setPanel(panel);
         const head = document.createElement("div");
         head.className = "tr-phead";
-        head.insertAdjacentHTML('beforeend', `<div class="tr-plang"><span style="font-size:11px;color:#6b7280">→ ${escHtml(msg.tl || '')}</span></div><button class="tr-pclose">${svgIcon("close")}</button>`);
+        setHTML(head, `<div class="tr-plang"><span style="font-size:11px;color:#6b7280">→ ${escHtml(msg.tl || '')}</span></div><button class="tr-pclose">${svgIcon("close")}</button>`);
         head.querySelector(".tr-pclose").addEventListener("click", () => clearAll());
         const body = document.createElement("div");
         body.className = "tr-pbody";
-        body.insertAdjacentHTML('beforeend', `<div class="tr-original"><span class="tr-original-text">${escHtml((msg.text || "").substring(0, 200))}</span><button class="tr-speak-btn" data-lang="auto">${svgIcon("volume")}</button></div><div class="tr-result"><span class="tr-result-text">${escHtml(msg.result)}</span><button class="tr-speak-btn" data-lang="${escHtml(msg.tl || '')}">${svgIcon("volume")}</button></div><div class="tr-actions"><button class="tr-copy-btn">${svgIcon("copy")}Copy</button></div>`);
+        setHTML(body, `<div class="tr-original"><span class="tr-original-text">${escHtml((msg.text || "").substring(0, 200))}</span><button class="tr-speak-btn" data-lang="auto">${svgIcon("volume")}</button></div><div class="tr-result"><span class="tr-result-text">${escHtml(msg.result)}</span><button class="tr-speak-btn" data-lang="${escHtml(msg.tl || '')}">${svgIcon("volume")}</button></div><div class="tr-actions"><button class="tr-copy-btn">${svgIcon("copy")}Copy</button></div>`);
         attachCopyHandler(body.querySelector(".tr-copy-btn"), msg.result);
         attachSpeakHandlers(body);
         panel.appendChild(head);

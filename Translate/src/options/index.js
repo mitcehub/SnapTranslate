@@ -1,4 +1,5 @@
 import { initSettingsUI } from './settings-ui.js';
+import { setHTML } from '../shared/constants.js';
 
 initSettingsUI();
 
@@ -10,7 +11,7 @@ document.getElementById("checkUpdateBtn")?.addEventListener("click", () => {
   chrome.runtime.sendMessage({ action: "checkUpdate" }, (r) => {
     btn.disabled = false;
     if (r?.hasUpdate) {
-      status.textContent = ''; status.insertAdjacentHTML('beforeend', `发现新版本 <a href="${r.url}" target="_blank">v${r.latest}</a>（当前 v${r.current}）`);
+      setHTML(status, `发现新版本 <a href="${r.url}" target="_blank">v${r.latest}</a>（当前 v${r.current}）`);
     } else if (r?.error) {
       status.textContent = "检查失败: " + r.error;
     } else {
