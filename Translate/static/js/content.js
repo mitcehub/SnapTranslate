@@ -984,21 +984,22 @@
     return false;
   }
 
-  function shouldSkipText(text, tl) {
+  function shouldSkipText(text, tl, options = {}) {
     if (!text) return true;
     const trimmed = text.trim();
     if (!trimmed) return true;
-    if (trimmed.length < 2) return true;
+    if (trimmed.length < (options.minTextCount ?? 2)) return true;
     if (/^\d+$/.test(trimmed)) return true;
     if (/^[\s\W]*$/.test(trimmed)) return true;
     const words = trimmed.split(/\s+/).filter(w => /\w/.test(w));
-    if (words.length < 1) return true;
+    if (words.length < (options.minWordCount ?? 1)) return true;
     if (tl) {
       const detected = detectTextLang(trimmed);
       if (detected) {
-        const tlPrefix = tl.toLowerCase().split('-')[0];
-        const detectedPrefix = detected.toLowerCase().split('-')[0];
-        if (tlPrefix === detectedPrefix) return true;
+        const tlLower = tl.toLowerCase();
+        const detectedLower = detected.toLowerCase();
+        if (tlLower === detectedLower) return true;
+        if (options.ignoreZhCNandZhTW && tlLower.startsWith('zh') && detectedLower.startsWith('zh')) return true;
       }
     }
     return false;
@@ -1339,12 +1340,31 @@
     return 1;
   }
 
-  async function translateBatch(batch, sl, tl, engine, languageFilter) {
+  async function translateBatch(batch, sl, tl, engine, options = {}) {
+    const { languageFilter, detectParagraphLanguage, ignoreZhCNandZhTW, excludeLanguages, paragraphMinTextCount, paragraphMinWordCount } = options;
+    const doDetect = (languageFilter === 'skip-target') || detectParagraphLanguage;
+
     const texts = [];
     const parasToTranslate = [];
 
     for (const para of batch) {
-      if (shouldSkipText(para.text, languageFilter === 'skip-target' ? tl : null)) continue;
+      if (doDetect && excludeLanguages?.length) {
+        const detected = detectTextLang(para.text);
+        if (detected) {
+          const isExcluded = excludeLanguages.some(lang => {
+            if (lang === detected) return true;
+            if (ignoreZhCNandZhTW && lang.startsWith('zh') && detected.startsWith('zh')) return true;
+            return false;
+          });
+          if (isExcluded) continue;
+        }
+      }
+
+      if (shouldSkipText(para.text, doDetect ? tl : null, {
+        minTextCount: paragraphMinTextCount,
+        minWordCount: paragraphMinWordCount,
+        ignoreZhCNandZhTW,
+      })) continue;
       const key = getCacheKey(para.text, sl, tl, engine);
       const cached = cacheGet(key);
       if (cached) {
@@ -1447,7 +1467,7 @@
     }
   }
 
-  async function translateParagraphs(paragraphs, sl, tl, engine, languageFilter) {
+  async function translateParagraphs(paragraphs, sl, tl, engine, options = {}) {
     if (!paragraphs.length) return 0;
 
     const inViewport = [];
@@ -1469,7 +1489,7 @@
 
     for (let i = 0; i < inViewportBatches.length; i += CONCURRENT_BATCHES) {
       const chunk = inViewportBatches.slice(i, i + CONCURRENT_BATCHES);
-      await Promise.all(chunk.map(batch => translateBatch(batch, sl, tl, engine, languageFilter)));
+      await Promise.all(chunk.map(batch => translateBatch(batch, sl, tl, engine, options)));
       translated += chunk.reduce((sum, batch) => sum + batch.length, 0);
       charsThisFrame += chunk.reduce((sum, batch) => sum + batch.reduce((s, p) => s + p.text.length, 0), 0);
       if (charsThisFrame >= DEFER_CHARS_PER_FRAME) {
@@ -1480,7 +1500,7 @@
 
     for (let i = 0; i < outOfViewportBatches.length; i += CONCURRENT_BATCHES) {
       const chunk = outOfViewportBatches.slice(i, i + CONCURRENT_BATCHES);
-      await Promise.all(chunk.map(batch => translateBatch(batch, sl, tl, engine, languageFilter)));
+      await Promise.all(chunk.map(batch => translateBatch(batch, sl, tl, engine, options)));
       translated += chunk.reduce((sum, batch) => sum + batch.length, 0);
       charsThisFrame += chunk.reduce((sum, batch) => sum + batch.reduce((s, p) => s + p.text.length, 0), 0);
       if (charsThisFrame >= DEFER_CHARS_PER_FRAME) {
@@ -1506,7 +1526,15 @@
     const excluded = buildExcludeSet(currentRule?.excludeSelectors);
     const paragraphs = collectParagraphs(document.body, excluded, currentRule || {});
     if (paragraphs.length) {
-      await translateParagraphs(paragraphs, currentSl, currentTl, currentEngine, currentRule?.languageFilter);
+      const options = {
+        languageFilter: currentRule?.languageFilter,
+        detectParagraphLanguage: currentRule?.detectParagraphLanguage,
+        ignoreZhCNandZhTW: currentRule?.ignoreZhCNandZhTW,
+        excludeLanguages: currentRule?.excludeLanguages,
+        paragraphMinTextCount: currentRule?.paragraphMinTextCount,
+        paragraphMinWordCount: currentRule?.paragraphMinWordCount,
+      };
+      await translateParagraphs(paragraphs, currentSl, currentTl, currentEngine, options);
     }
   }
 
@@ -1610,7 +1638,15 @@
     const paragraphs = collectParagraphs(document.body, excluded, rule);
 
     if (paragraphs.length) {
-      await translateParagraphs(paragraphs, sl, tl, engine, rule.languageFilter);
+      const options = {
+        languageFilter: rule.languageFilter,
+        detectParagraphLanguage: rule.detectParagraphLanguage,
+        ignoreZhCNandZhTW: rule.ignoreZhCNandZhTW,
+        excludeLanguages: rule.excludeLanguages,
+        paragraphMinTextCount: rule.paragraphMinTextCount,
+        paragraphMinWordCount: rule.paragraphMinWordCount,
+      };
+      await translateParagraphs(paragraphs, sl, tl, engine, options);
     }
     startObserver();
   }

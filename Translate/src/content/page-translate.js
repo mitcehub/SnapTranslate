@@ -1,12 +1,19 @@
-import { IGNORE_TAGS, sendMessage } from '../shared/constants.js';
-import { buildExcludeSet, shouldSkipText, shouldSkipElement, shouldSkipByVisibility, applySemanticMarkers, STAY_ORIGINAL_TAGS } from './universal-rules.js';
+import { sendMessage, detectTextLang } from '../shared/constants.js';
+import {
+  buildExcludeSet, shouldSkipText, shouldSkipElement,
+  shouldSkipByVisibility, applySemanticMarkers, STAY_ORIGINAL_TAGS,
+  SKIP_TAGS, isBlockElement
+} from './universal-rules.js';
 
 const MARKER = 'data-snap-translated';
+const WRAPPER_CLASS = 'snap-target-wrapper';
+const INNER_CLASS = 'snap-target-inner';
 const MAX_TEXT_LENGTH_PER_REQUEST = 1800;
-const MAX_TEXT_GROUP_LENGTH = 50;
-const SCROLL_LIMIT_SCREENS = 1;
+const MAX_PARAGRAPH_LENGTH = 5000;
+const SCROLL_LIMIT_SCREENS = 2;
 const TRANSLATION_CACHE_KEY_PREFIX = 'tr-cache:';
-const DEFER_CHARS_PER_FRAME = 5000;
+const DEFER_CHARS_PER_FRAME = 8000;
+const CONCURRENT_BATCHES = 3;
 
 let injectedCssCache = new Set();
 
@@ -53,182 +60,159 @@ export function applyFixedElements(fixedElements) {
   }
 }
 
-function collectVisibleTextNodes(root, excluded, skipTags) {
-  const nodes = [];
-  try {
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
-    while (walker.nextNode()) {
-      const node = walker.currentNode;
-      const text = node.textContent.trim();
-      if (!text) continue;
-      const parent = node.parentElement;
-      if (!parent) continue;
-      if (parent.closest(`[${MARKER}]`)) continue;
-      if (shouldSkipElement(parent, excluded)) continue;
-      if (skipTags.has(parent.tagName)) continue;
-      nodes.push(node);
-    }
-  } catch { }
-  return nodes;
+function injectBaseStyles() {
+  const styleId = 'snap-base-styles';
+  if (document.getElementById(styleId)) return;
+  const css = `
+.${WRAPPER_CLASS} { display: inline; }
+.${INNER_CLASS} { display: inline; }
+.${ORIGINAL_CLASS} { display: none !important; }
+  `.trim();
+  const style = document.createElement('style');
+  style.id = styleId;
+  style.textContent = css;
+  document.head.appendChild(style);
 }
 
-function walkShadowText(root, excluded, skipTags, nodes, excludeSlots, enterShadow) {
-  if (root.nodeType === Node.ELEMENT_NODE) {
-    if (excludeSlots?.length) {
-      const slot = root.getAttribute('slot');
-      if (slot && excludeSlots.includes(slot)) return;
+let markedNodes = new WeakSet();
+
+function isMarked(node) {
+  if (!node) return false;
+  if (node.nodeType === Node.ELEMENT_NODE && node.hasAttribute(MARKER)) return true;
+  if (node.nodeType === Node.TEXT_NODE && node.parentElement && node.parentElement.hasAttribute(MARKER)) return true;
+  return markedNodes.has(node);
+}
+
+function markNode(node) {
+  if (node) markedNodes.add(node);
+}
+
+function collectParagraphs(root, excluded, rule) {
+  const paragraphs = [];
+  let currentNodes = [];
+  let currentText = '';
+  let currentBlockRoot = null;
+
+  function flushParagraph() {
+    if (currentNodes.length === 0) return;
+    const text = currentText.trim();
+    if (!text || text.length < 2) {
+      currentNodes = [];
+      currentText = '';
+      currentBlockRoot = null;
+      return;
     }
+    paragraphs.push({
+      nodes: [...currentNodes],
+      text: currentText.trim(),
+      blockRoot: currentBlockRoot,
+    });
+    currentNodes = [];
+    currentText = '';
+    currentBlockRoot = null;
   }
-  if (root.nodeType === Node.TEXT_NODE) {
-    const parent = root.parentElement;
+
+  function addTextNode(node) {
+    if (isMarked(node)) return;
+    const text = node.textContent;
+    if (!text.trim()) return;
+    const parent = node.parentElement;
     if (!parent) return;
-    if (parent.closest(`[${MARKER}]`)) return;
+    if (SKIP_TAGS.has(parent.tagName)) return;
+    if (STAY_ORIGINAL_TAGS.has(parent.tagName)) return;
+    if (parent.classList?.contains(ORIGINAL_CLASS) || parent.classList?.contains(INNER_CLASS)) return;
     if (shouldSkipElement(parent, excluded)) return;
-    if (skipTags.has(parent.tagName)) return;
-    if (!root.textContent.trim()) return;
-    nodes.push(root);
-    return;
+    if (shouldSkipByVisibility(parent)) return;
+    currentNodes.push(node);
+    currentText += text;
+    markNode(node);
   }
-  if (enterShadow !== false && root.shadowRoot) {
-    walkShadowText(root.shadowRoot, excluded, skipTags, nodes, excludeSlots, enterShadow);
-  }
-  let child = root.firstChild;
-  while (child) {
-    walkShadowText(child, excluded, skipTags, nodes, excludeSlots, enterShadow);
-    child = child.nextSibling;
-  }
-}
 
-function collectByContainerMode(rule) {
-  const containers = document.querySelectorAll(rule.containerSelector);
-  if (!containers.length) return [];
-  const excluded = buildExcludeSet(rule.excludeSelectors);
-  if (rule.excludeSlots?.length) {
-    for (const container of containers) {
-      const allElements = container.querySelectorAll('*');
-      for (let i = 0; i < allElements.length; i++) {
-        const slot = allElements[i].getAttribute('slot');
-        if (slot && rule.excludeSlots.includes(slot)) excluded.add(allElements[i]);
-      }
+  function walkDOM(el) {
+    if (!el) return;
+    if (el.nodeType === Node.TEXT_NODE) {
+      addTextNode(el);
+      return;
+    }
+    if (el.nodeType !== Node.ELEMENT_NODE) return;
+    if (SKIP_TAGS.has(el.tagName)) return;
+    if (el.classList?.contains(ORIGINAL_CLASS) || el.classList?.contains(INNER_CLASS)) return;
+    if (isMarked(el)) return;
+    if (shouldSkipElement(el, excluded)) return;
+    if (shouldSkipByVisibility(el)) return;
+    if (el.tagName === 'IFRAME') {
+      try {
+        if (el.contentDocument && el.contentDocument.body) {
+          walkDOM(el.contentDocument.body);
+        }
+      } catch { }
+      return;
+    }
+    if (el.shadowRoot) {
+      walkDOM(el.shadowRoot);
+    }
+    const isBlock = isBlockElement(el);
+    if (isBlock && currentNodes.length > 0) {
+      flushParagraph();
+    }
+    if (isBlock) {
+      currentBlockRoot = el;
+    }
+    let child = el.firstChild;
+    while (child) {
+      walkDOM(child);
+      child = child.nextSibling;
+    }
+    if (isBlock && currentNodes.length > 0) {
+      flushParagraph();
     }
   }
-  const blockTags = new Set(rule.extraBlockSelectors || []);
-  const skipTags = new Set([...IGNORE_TAGS, ...(rule.extraBlockTags || []), ...STAY_ORIGINAL_TAGS, ...blockTags]);
-  const nodes = [];
-  const enterShadow = !rule.shadowSelectors?.length;
-  for (const root of containers) {
-    walkShadowText(root, excluded, skipTags, nodes, rule.excludeSlots, enterShadow);
-  }
-  if (rule.shadowSelectors?.length) {
-    for (const sel of rule.shadowSelectors) {
-      const parts = sel.split(' >>> ');
-      if (parts.length === 2) {
-        const hosts = document.querySelectorAll(parts[0]);
-        for (const host of hosts) {
-          if (host.shadowRoot) {
-            const targets = host.shadowRoot.querySelectorAll(parts[1]);
-            for (const target of targets) {
-              if (target.getAttribute(MARKER)) continue;
-              if (excluded.has(target)) continue;
-              const inner = collectVisibleTextNodes(target, excluded, skipTags);
-              nodes.push(...inner);
+
+  if (rule.selectors?.length) {
+    for (const sel of rule.selectors) {
+      if (sel.includes(' >>> ')) {
+        const parts = sel.split(' >>> ');
+        if (parts.length === 2) {
+          const hosts = document.querySelectorAll(parts[0]);
+          for (const host of hosts) {
+            if (host.shadowRoot) {
+              const targets = host.shadowRoot.querySelectorAll(parts[1]);
+              for (const target of targets) {
+                walkDOM(target);
+              }
             }
           }
         }
       } else {
-        for (const el of document.querySelectorAll(sel)) {
-          if (el.getAttribute(MARKER)) continue;
-          if (excluded.has(el)) continue;
-          const inner = collectVisibleTextNodes(el, excluded, skipTags);
-          nodes.push(...inner);
+        const els = document.querySelectorAll(sel);
+        for (const el of els) {
+          walkDOM(el);
         }
-      }
-    }
-  }
-  return nodes;
-}
-
-function collectBySelectMode(rule) {
-  const selectors = rule.selectors;
-  if (!selectors?.length) return [];
-  const excluded = buildExcludeSet(rule.excludeSelectors);
-  const blockTags = new Set(rule.extraBlockSelectors || []);
-  const skipTags = new Set([...IGNORE_TAGS, ...STAY_ORIGINAL_TAGS, ...blockTags]);
-  const nodes = [];
-  for (const sel of selectors) {
-    if (sel.includes(' >>> ')) {
-      const parts = sel.split(' >>> ');
-      if (parts.length === 2) {
-        const hosts = document.querySelectorAll(parts[0]);
-        for (const host of hosts) {
-          if (host.shadowRoot) {
-            const targets = host.shadowRoot.querySelectorAll(parts[1]);
-            for (const target of targets) {
-              if (target.getAttribute(MARKER)) continue;
-              if (excluded.has(target)) continue;
-              const inner = collectVisibleTextNodes(target, excluded, skipTags);
-              nodes.push(...inner);
+        for (const host of document.querySelectorAll('*')) {
+          if (!host.shadowRoot) continue;
+          try {
+            const shadowEls = host.shadowRoot.querySelectorAll(sel);
+            for (const el of shadowEls) {
+              walkDOM(el);
             }
-          }
+          } catch { }
         }
-      }
-    } else if (sel.includes(' -> ')) {
-      const parts = sel.split(' -> ').map(s => s.trim());
-      let current = document;
-      for (let i = 0; i < parts.length; i++) {
-        const isLast = i === parts.length - 1;
-        const found = current.querySelectorAll(parts[i]);
-        if (!found.length) break;
-        if (isLast) {
-          for (const el of found) {
-            if (el.getAttribute(MARKER)) continue;
-            if (excluded.has(el)) continue;
-            const inner = collectVisibleTextNodes(el, excluded, skipTags);
-            nodes.push(...inner);
-          }
-        } else {
-          const next = found[0];
-          current = next.shadowRoot || next;
-        }
-      }
-    } else {
-      let els = document.querySelectorAll(sel);
-      for (const el of els) {
-        if (el.getAttribute(MARKER)) continue;
-        if (excluded.has(el)) continue;
-        const inner = collectVisibleTextNodes(el, excluded, skipTags);
-        nodes.push(...inner);
-      }
-      for (const host of document.querySelectorAll('*')) {
-        if (!host.shadowRoot) continue;
-        try {
-          els = host.shadowRoot.querySelectorAll(sel);
-          for (const el of els) {
-            if (el.getAttribute(MARKER)) continue;
-            if (excluded.has(el)) continue;
-            const inner = collectVisibleTextNodes(el, excluded, skipTags);
-            nodes.push(...inner);
-          }
-        } catch { }
       }
     }
+  } else if (rule.containerSelector) {
+    const containers = document.querySelectorAll(rule.containerSelector);
+    for (const container of containers) {
+      walkDOM(container);
+    }
+  } else {
+    walkDOM(root);
   }
-  return nodes;
+
+  flushParagraph();
+  return paragraphs;
 }
 
-function collectTargetNodes(rule) {
-  if (rule.selectors?.length) return collectBySelectMode(rule);
-  return collectByContainerMode(rule);
-}
-
-function isNodeVisible(node) {
-  const el = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
-  if (!el) return false;
-  return !shouldSkipByVisibility(el);
-}
-
-function isNodeInViewport(node, screens) {
-  const el = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+function isInViewport(el, screens) {
   if (!el) return true;
   const rect = el.getBoundingClientRect();
   const vh = window.innerHeight;
@@ -236,56 +220,23 @@ function isNodeInViewport(node, screens) {
   return rect.top < vh + maxScroll && rect.bottom > -maxScroll;
 }
 
-function splitTextIntoGroups(nodes, maxLength, maxGroupLength) {
-  const groups = [];
-  let currentGroup = [];
+function splitParagraphsIntoBatches(paragraphs, maxLength) {
+  const batches = [];
+  let currentBatch = [];
   let currentLength = 0;
-  for (const node of nodes) {
-    const text = node.textContent.trim();
-    if (!text) continue;
-    if (text.length > maxLength) {
-      if (currentGroup.length) {
-        groups.push(currentGroup);
-        currentGroup = [];
-        currentLength = 0;
-      }
-      groups.push([node]);
-      continue;
+
+  for (const para of paragraphs) {
+    const text = para.text;
+    if (currentLength + text.length > maxLength && currentBatch.length > 0) {
+      batches.push(currentBatch);
+      currentBatch = [];
+      currentLength = 0;
     }
-    if (currentLength + text.length > maxLength || currentGroup.length >= maxGroupLength) {
-      if (currentGroup.length) {
-        groups.push(currentGroup);
-        currentGroup = [];
-        currentLength = 0;
-      }
-    }
-    currentGroup.push(node);
+    currentBatch.push(para);
     currentLength += text.length;
   }
-  if (currentGroup.length) groups.push(currentGroup);
-  return groups;
-}
-
-async function translateText(text, sl, tl, engine, retries = 2) {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const r = await sendMessage({
-        action: "translate",
-        text,
-        sourceLang: sl,
-        targetLang: tl,
-        engine
-      });
-      if (r?.success) return r.result;
-      throw new Error(r?.error || 'translate failed');
-    } catch (e) {
-      if (attempt < retries) {
-        await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 500));
-      } else {
-        throw e;
-      }
-    }
-  }
+  if (currentBatch.length) batches.push(currentBatch);
+  return batches;
 }
 
 let translationCache = new Map();
@@ -327,94 +278,217 @@ function cacheSet(key, value) {
   } catch { }
 }
 
-async function translateNodes(nodes, sl, tl, engine, languageFilter) {
+const ORIGINAL_CLASS = 'snap-original';
+
+function insertTranslationForParagraph(para, translatedText) {
+  const nodes = para.nodes;
   if (!nodes.length) return 0;
-  const maxLength = MAX_TEXT_LENGTH_PER_REQUEST;
-  const maxGroupLength = MAX_TEXT_GROUP_LENGTH;
-  const groups = splitTextIntoGroups(nodes, maxLength, maxGroupLength);
+
+  const firstNode = nodes[0];
+  const lastNode = nodes[nodes.length - 1];
+  const parent = firstNode.parentElement;
+  if (!parent) return 0;
+
+  const refNode = lastNode.nextSibling;
+
+  const wrapper = document.createElement('span');
+  wrapper.className = WRAPPER_CLASS;
+  wrapper.setAttribute(MARKER, 'page');
+
+  const originalContainer = document.createElement('span');
+  originalContainer.className = ORIGINAL_CLASS;
+  originalContainer.style.display = 'none';
+  for (const node of nodes) {
+    if (node.parentNode) {
+      node.parentNode.removeChild(node);
+    }
+    originalContainer.appendChild(node);
+  }
+  wrapper.appendChild(originalContainer);
+
+  const inner = document.createElement('span');
+  inner.className = INNER_CLASS;
+  inner.textContent = translatedText;
+  wrapper.appendChild(inner);
+
+  if (refNode && refNode.parentNode === parent) {
+    parent.insertBefore(wrapper, refNode);
+  } else {
+    parent.appendChild(wrapper);
+  }
+
+  return 1;
+}
+
+async function translateBatch(batch, sl, tl, engine, options = {}) {
+  const { languageFilter, detectParagraphLanguage, ignoreZhCNandZhTW, excludeLanguages, paragraphMinTextCount, paragraphMinWordCount } = options;
+  const doDetect = (languageFilter === 'skip-target') || detectParagraphLanguage;
+
+  const texts = [];
+  const parasToTranslate = [];
+
+  for (const para of batch) {
+    if (doDetect && excludeLanguages?.length) {
+      const detected = detectTextLang(para.text);
+      if (detected) {
+        const isExcluded = excludeLanguages.some(lang => {
+          if (lang === detected) return true;
+          if (ignoreZhCNandZhTW && lang.startsWith('zh') && detected.startsWith('zh')) return true;
+          return false;
+        });
+        if (isExcluded) continue;
+      }
+    }
+
+    if (shouldSkipText(para.text, doDetect ? tl : null, {
+      minTextCount: paragraphMinTextCount,
+      minWordCount: paragraphMinWordCount,
+      ignoreZhCNandZhTW,
+    })) continue;
+    const key = getCacheKey(para.text, sl, tl, engine);
+    const cached = cacheGet(key);
+    if (cached) {
+      insertTranslationForParagraph(para, cached);
+      continue;
+    }
+    texts.push(para.text);
+    parasToTranslate.push({ para, key });
+  }
+
+  if (!parasToTranslate.length) return;
+
+  for (const { para } of parasToTranslate) {
+    const placeholder = document.createElement('span');
+    placeholder.className = 'tr-translating';
+    placeholder.setAttribute(MARKER, 'translating');
+    placeholder.textContent = '...';
+    const firstNode = para.nodes[0];
+    const parent = firstNode?.parentElement;
+    if (parent) {
+      const lastNode = para.nodes[para.nodes.length - 1];
+      const refNode = lastNode.nextSibling;
+      const originalContainer = document.createElement('span');
+      originalContainer.className = ORIGINAL_CLASS;
+      originalContainer.style.display = 'none';
+      for (const node of para.nodes) {
+        if (node.parentNode) node.parentNode.removeChild(node);
+        originalContainer.appendChild(node);
+      }
+      placeholder.appendChild(originalContainer);
+      if (refNode && refNode.parentNode === parent) {
+        parent.insertBefore(placeholder, refNode);
+      } else {
+        parent.appendChild(placeholder);
+      }
+      para._placeholder = placeholder;
+    }
+  }
+
+  try {
+    const r = await sendMessage({
+      action: "translateBatch",
+      texts,
+      sourceLang: sl,
+      targetLang: tl,
+      engine
+    });
+
+    if (r?.success && Array.isArray(r.results)) {
+      for (let i = 0; i < parasToTranslate.length; i++) {
+        const { para, key } = parasToTranslate[i];
+        const resultText = r.results[i];
+        if (resultText == null) continue;
+        cacheSet(key, resultText);
+        const placeholder = para._placeholder;
+        if (!placeholder || !placeholder.parentNode) continue;
+        const origContainer = placeholder.querySelector(`.${ORIGINAL_CLASS}`);
+        const wrapper = document.createElement('span');
+        wrapper.className = WRAPPER_CLASS;
+        wrapper.setAttribute(MARKER, 'page');
+        if (origContainer) wrapper.appendChild(origContainer);
+        const inner = document.createElement('span');
+        inner.className = INNER_CLASS;
+        inner.textContent = resultText;
+        wrapper.appendChild(inner);
+        placeholder.parentNode.replaceChild(wrapper, placeholder);
+      }
+    } else {
+      for (const { para } of parasToTranslate) {
+        restorePlaceholder(para);
+      }
+    }
+  } catch {
+    for (const { para } of parasToTranslate) {
+      restorePlaceholder(para);
+    }
+  }
+}
+
+function restorePlaceholder(para) {
+  const placeholder = para._placeholder;
+  if (!placeholder || !placeholder.parentNode) return;
+  const origContainer = placeholder.querySelector(`.${ORIGINAL_CLASS}`);
+  if (origContainer) {
+    const fragment = document.createDocumentFragment();
+    while (origContainer.firstChild) {
+      fragment.appendChild(origContainer.firstChild);
+    }
+    placeholder.parentNode.replaceChild(fragment, placeholder);
+  } else {
+    const fragment = document.createDocumentFragment();
+    for (const node of para.nodes) {
+      if (node) fragment.appendChild(node);
+    }
+    if (fragment.childNodes.length) {
+      placeholder.parentNode.replaceChild(fragment, placeholder);
+    } else {
+      placeholder.remove();
+    }
+  }
+}
+
+async function translateParagraphs(paragraphs, sl, tl, engine, options = {}) {
+  if (!paragraphs.length) return 0;
+
+  const inViewport = [];
+  const outOfViewport = [];
+  for (const para of paragraphs) {
+    const rootEl = para.blockRoot || (para.nodes[0]?.parentElement);
+    if (isInViewport(rootEl, 0)) {
+      inViewport.push(para);
+    } else {
+      outOfViewport.push(para);
+    }
+  }
+
+  const inViewportBatches = splitParagraphsIntoBatches(inViewport, MAX_TEXT_LENGTH_PER_REQUEST);
+  const outOfViewportBatches = splitParagraphsIntoBatches(outOfViewport, MAX_TEXT_LENGTH_PER_REQUEST);
+
   let translated = 0;
   let charsThisFrame = 0;
-  for (const group of groups) {
-    const toTranslate = [];
-    const cached = [];
-    for (const node of group) {
-      const text = node.textContent.trim();
-      if (shouldSkipText(text, languageFilter === 'skip-target' ? tl : null)) continue;
-      const key = getCacheKey(text, sl, tl, engine);
-      const cachedResult = cacheGet(key);
-      if (cachedResult) {
-        cached.push({ node, text: cachedResult, original: text });
-      } else {
-        toTranslate.push({ node, text, key });
-      }
-    }
-    for (const { node, text, original } of cached) {
-      if (!node.parentNode) continue;
-      const span = document.createElement('span');
-      span.textContent = text;
-      span.setAttribute(MARKER, 'page');
-      span.setAttribute('data-snap-original', original);
-      node.parentNode.replaceChild(span, node);
-      translated++;
-    }
-    if (toTranslate.length) {
-      const texts = toTranslate.map(t => t.text);
-      for (const { node } of toTranslate) {
-        if (!node.parentNode) continue;
-        const placeholder = document.createElement('span');
-        placeholder.className = 'tr-translating';
-        placeholder.setAttribute(MARKER, 'translating');
-        placeholder.textContent = node.textContent;
-        node.parentNode.replaceChild(placeholder, node);
-        node._placeholder = placeholder;
-      }
-      try {
-        const r = await sendMessage({
-          action: "translateBatch",
-          texts,
-          sourceLang: sl,
-          targetLang: tl,
-          engine
-        });
-        if (r?.success && Array.isArray(r.results)) {
-          for (let i = 0; i < toTranslate.length; i++) {
-            const { node, key } = toTranslate[i];
-            const resultText = r.results[i];
-            if (resultText == null) continue;
-            const placeholder = node._placeholder;
-            if (!placeholder || !placeholder.parentNode) continue;
-            const original = node.textContent.trim();
-            cacheSet(key, resultText);
-            const span = document.createElement('span');
-            span.textContent = resultText;
-            span.setAttribute(MARKER, 'page');
-            span.setAttribute('data-snap-original', original);
-            placeholder.parentNode.replaceChild(span, placeholder);
-            translated++;
-          }
-        } else {
-          for (const { node } of toTranslate) {
-            const ph = node._placeholder;
-            if (ph && ph.parentNode) {
-              ph.parentNode.replaceChild(node, ph);
-            }
-          }
-        }
-      } catch {
-        for (const { node } of toTranslate) {
-          const ph = node._placeholder;
-          if (ph && ph.parentNode) {
-            ph.parentNode.replaceChild(node, ph);
-          }
-        }
-      }
-    }
-    charsThisFrame += group.reduce((sum, node) => sum + node.textContent.length, 0);
+
+  for (let i = 0; i < inViewportBatches.length; i += CONCURRENT_BATCHES) {
+    const chunk = inViewportBatches.slice(i, i + CONCURRENT_BATCHES);
+    await Promise.all(chunk.map(batch => translateBatch(batch, sl, tl, engine, options)));
+    translated += chunk.reduce((sum, batch) => sum + batch.length, 0);
+    charsThisFrame += chunk.reduce((sum, batch) => sum + batch.reduce((s, p) => s + p.text.length, 0), 0);
     if (charsThisFrame >= DEFER_CHARS_PER_FRAME) {
       await new Promise(r => requestAnimationFrame(r));
       charsThisFrame = 0;
     }
   }
+
+  for (let i = 0; i < outOfViewportBatches.length; i += CONCURRENT_BATCHES) {
+    const chunk = outOfViewportBatches.slice(i, i + CONCURRENT_BATCHES);
+    await Promise.all(chunk.map(batch => translateBatch(batch, sl, tl, engine, options)));
+    translated += chunk.reduce((sum, batch) => sum + batch.length, 0);
+    charsThisFrame += chunk.reduce((sum, batch) => sum + batch.reduce((s, p) => s + p.text.length, 0), 0);
+    if (charsThisFrame >= DEFER_CHARS_PER_FRAME) {
+      await new Promise(r => requestAnimationFrame(r));
+      charsThisFrame = 0;
+    }
+  }
+
   return translated;
 }
 
@@ -429,17 +503,47 @@ let currentEngine = null;
 async function retranslate() {
   if (retranslateTimer) return;
   retranslateTimer = setTimeout(() => { retranslateTimer = null; }, 300);
-  const nodes = collectTargetNodes(currentRule);
-  if (nodes.length) {
-    await translateNodes(nodes, currentSl, currentTl, currentEngine, currentRule.languageFilter);
+  const excluded = buildExcludeSet(currentRule?.excludeSelectors);
+  const paragraphs = collectParagraphs(document.body, excluded, currentRule || {});
+  if (paragraphs.length) {
+    const options = {
+      languageFilter: currentRule?.languageFilter,
+      detectParagraphLanguage: currentRule?.detectParagraphLanguage,
+      ignoreZhCNandZhTW: currentRule?.ignoreZhCNandZhTW,
+      excludeLanguages: currentRule?.excludeLanguages,
+      paragraphMinTextCount: currentRule?.paragraphMinTextCount,
+      paragraphMinWordCount: currentRule?.paragraphMinWordCount,
+    };
+    await translateParagraphs(paragraphs, currentSl, currentTl, currentEngine, options);
   }
 }
 
 function startObserver() {
   if (observer) observer.disconnect();
   let pending = false;
-  const callback = () => {
+  const callback = (mutations) => {
     if (pending) return;
+    let shouldProcess = false;
+    for (const mutation of mutations) {
+      if (mutation.type === 'childList') {
+        for (const node of mutation.addedNodes) {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            if (node.classList?.contains('tr-translating') ||
+                node.classList?.contains(WRAPPER_CLASS) ||
+                node.hasAttribute?.(MARKER) ||
+                node.id === 'snap-base-styles' ||
+                node.id === 'snap-global-styles' ||
+                node.getAttribute?.('data-snap-css') !== null) {
+              continue;
+            }
+            shouldProcess = true;
+            break;
+          }
+        }
+      }
+      if (shouldProcess) break;
+    }
+    if (!shouldProcess) return;
     pending = true;
     requestAnimationFrame(() => {
       pending = false;
@@ -492,6 +596,7 @@ async function waitForSelectors(selectors, maxRetries = 30, delay = 200) {
 }
 
 export async function applyPageRule(rule, sl, tl, engine) {
+  injectBaseStyles();
   applySemanticMarkers();
   applyFixedElements(rule.fixedElements);
 
@@ -503,13 +608,61 @@ export async function applyPageRule(rule, sl, tl, engine) {
   } else if (rule.containerSelector) {
     await waitForContainers(rule.containerSelector);
   }
+
   currentRule = rule;
   currentSl = sl;
   currentTl = tl;
   currentEngine = engine;
-  const nodes = collectTargetNodes(rule);
-  if (nodes.length) {
-    await translateNodes(nodes, sl, tl, engine, rule.languageFilter);
+
+  const excluded = buildExcludeSet(rule.excludeSelectors);
+  const paragraphs = collectParagraphs(document.body, excluded, rule);
+
+  if (paragraphs.length) {
+    const options = {
+      languageFilter: rule.languageFilter,
+      detectParagraphLanguage: rule.detectParagraphLanguage,
+      ignoreZhCNandZhTW: rule.ignoreZhCNandZhTW,
+      excludeLanguages: rule.excludeLanguages,
+      paragraphMinTextCount: rule.paragraphMinTextCount,
+      paragraphMinWordCount: rule.paragraphMinWordCount,
+    };
+    await translateParagraphs(paragraphs, sl, tl, engine, options);
   }
   startObserver();
+}
+
+export function revertPageTranslation() {
+  stopObserver();
+  markedNodes = new WeakSet();
+  document.querySelectorAll(`.${WRAPPER_CLASS}`).forEach(wrapper => {
+    const parent = wrapper.parentNode;
+    if (!parent) return;
+    const originalContainer = wrapper.querySelector(`.${ORIGINAL_CLASS}`);
+    if (originalContainer) {
+      const fragment = document.createDocumentFragment();
+      while (originalContainer.firstChild) {
+        fragment.appendChild(originalContainer.firstChild);
+      }
+      parent.replaceChild(fragment, wrapper);
+    } else {
+      wrapper.remove();
+    }
+  });
+  document.querySelectorAll("[data-snap-translated='fixed']").forEach((el) => {
+    el.removeAttribute(MARKER);
+  });
+  document.querySelectorAll('.tr-translating').forEach(el => {
+    const parent = el.parentNode;
+    if (!parent) { el.remove(); return; }
+    const origContainer = el.querySelector(`.${ORIGINAL_CLASS}`);
+    if (origContainer) {
+      const fragment = document.createDocumentFragment();
+      while (origContainer.firstChild) {
+        fragment.appendChild(origContainer.firstChild);
+      }
+      parent.replaceChild(fragment, el);
+    } else {
+      el.remove();
+    }
+  });
 }

@@ -151,21 +151,22 @@ export function isInlineElement(el) {
   return false;
 }
 
-export function shouldSkipText(text, tl) {
+export function shouldSkipText(text, tl, options = {}) {
   if (!text) return true;
   const trimmed = text.trim();
   if (!trimmed) return true;
-  if (trimmed.length < 2) return true;
+  if (trimmed.length < (options.minTextCount ?? 2)) return true;
   if (/^\d+$/.test(trimmed)) return true;
   if (/^[\s\W]*$/.test(trimmed)) return true;
   const words = trimmed.split(/\s+/).filter(w => /\w/.test(w));
-  if (words.length < 1) return true;
+  if (words.length < (options.minWordCount ?? 1)) return true;
   if (tl) {
     const detected = detectTextLang(trimmed);
     if (detected) {
-      const tlPrefix = tl.toLowerCase().split('-')[0];
-      const detectedPrefix = detected.toLowerCase().split('-')[0];
-      if (tlPrefix === detectedPrefix) return true;
+      const tlLower = tl.toLowerCase();
+      const detectedLower = detected.toLowerCase();
+      if (tlLower === detectedLower) return true;
+      if (options.ignoreZhCNandZhTW && tlLower.startsWith('zh') && detectedLower.startsWith('zh')) return true;
     }
   }
   return false;

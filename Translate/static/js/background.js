@@ -8768,6 +8768,71 @@
   		],
   		autoTranslate: true,
   		translateUI: false
+  	},
+  	{
+  		name: "onboarding",
+  		matches: [
+  			"https://onboarding.immersivetranslate.*",
+  			"https://*onboarding.immersivetranslate.*"
+  		],
+  		excludeMatches: [
+  		],
+  		selectors: [
+  		],
+  		excludeSelectors: [
+  		],
+  		injectedCss: [
+  		],
+  		extraBlockSelectors: [
+  		],
+  		extraInlineSelectors: [
+  		],
+  		stayOriginalSelectors: [
+  		],
+  		detectParagraphLanguage: true,
+  		blockMinTextCount: 0,
+  		blockMinWordCount: 0,
+  		waitForSelectorsTimeout: 1
+  	},
+  	{
+  		name: "steampowered",
+  		matches: "store.steampowered.com",
+  		excludeMatches: [
+  		],
+  		selectors: [
+  		],
+  		excludeSelectors: [
+  		],
+  		injectedCss: [
+  		],
+  		extraBlockSelectors: [
+  		],
+  		extraInlineSelectors: [
+  		],
+  		stayOriginalSelectors: [
+  		],
+  		detectParagraphLanguage: true
+  	},
+  	{
+  		name: "liquipedia",
+  		matches: [
+  			"liquipedia.net"
+  		],
+  		excludeMatches: [
+  		],
+  		selectors: [
+  		],
+  		excludeSelectors: [
+  			".carousel-item"
+  		],
+  		injectedCss: [
+  		],
+  		extraBlockSelectors: [
+  		],
+  		extraInlineSelectors: [
+  		],
+  		stayOriginalSelectors: [
+  		]
   	}
   ];
 
