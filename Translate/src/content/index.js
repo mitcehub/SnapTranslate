@@ -3,12 +3,12 @@ import { svgIcon } from './ui/icons.js';
 import { escHtml, sendMessage, isIgnored, isBlacklisted as checkBlacklist } from '../shared/constants.js';
 import { isEditable, doReplace } from './input-translate.js';
 import { getSelection, showToolbar, showPanel, clearAll, setTBar, setPanel, setLastX, setLastY, getLastX, getLastY, startPanelTimer } from './sel-translate.js';
-import { applyPageRule, stopObserver } from './page-translate.js';
+import { applyPageRule, stopObserver, revertPageTranslation as revertTranslation } from './page-translate.js';
 import { getIconUrl, applyTheme, watchTheme } from '../shared/theme.js';
 
 const GENERIC_RULE = {
   name: "通用规则",
-  selectors: ["p", "h1", "h2", "h3", "h4", "h5", "h6", "article", "main", "section", "blockquote", "li", "td", "th", "figcaption", "details", "summary", "label", "dd", "dt"],
+  selectors: [],
   excludeMatches: [],
   autoTranslate: true,
   translateUI: false,
@@ -16,19 +16,18 @@ const GENERIC_RULE = {
 
 const LS_PREFIX = "snap-translate:";
 
-function detectContentLang() {
-  const body = document.body;
-  if (!body) return '';
-  const sample = body.innerText.substring(0, 800);
+function detectContentLang(rule) {
+  const sample = getContentSample(rule);
+  if (!sample) return '';
   const totalNonSpace = (sample.match(/[^\s]/g) || []).length;
-  if (totalNonSpace < 20) return '';
+  if (totalNonSpace < 30) return '';
   const zhChars = (sample.match(/[\u4e00-\u9fff]/g) || []).length;
   const jaChars = (sample.match(/[\u3040-\u309f\u30a0-\u30ff]/g) || []).length;
   const koChars = (sample.match(/[\uac00-\ud7af]/g) || []).length;
   const ruChars = (sample.match(/[\u0400-\u04ff]/g) || []).length;
   const arChars = (sample.match(/[\u0600-\u06ff]/g) || []).length;
   const enChars = (sample.match(/[a-zA-Z]/g) || []).length;
-  if (zhChars / totalNonSpace > 0.15) return 'zh';
+  if (zhChars / totalNonSpace > 0.4) return 'zh';
   if (jaChars / totalNonSpace > 0.1) return 'ja';
   if (koChars / totalNonSpace > 0.1) return 'ko';
   if (ruChars / totalNonSpace > 0.15) return 'ru';
@@ -37,34 +36,63 @@ function detectContentLang() {
   return '';
 }
 
-function detectPageLang() {
-  const htmlLang = document.documentElement?.getAttribute('lang') || '';
-  if (htmlLang) return htmlLang.split('-')[0].toLowerCase();
+function getContentSample(rule) {
+  let text = '';
 
-  const metaLang = document.querySelector('meta[http-equiv="content-language"]');
-  if (metaLang) {
-    const c = metaLang.getAttribute('content') || '';
-    if (c) return c.split('-')[0].toLowerCase();
+  if (rule) {
+    if (rule.containerSelector) {
+      const containers = document.querySelectorAll(rule.containerSelector);
+      for (const c of containers) {
+        text += c.innerText + ' ';
+        if (text.length > 3000) break;
+      }
+      if (text.trim()) return text.substring(0, 3000);
+    }
+    if (rule.selectors?.length) {
+      for (const sel of rule.selectors) {
+        const cleanSel = sel.split(' >>> ')[0].split(' -> ')[0].trim();
+        try {
+          const els = document.querySelectorAll(cleanSel);
+          for (const el of els) {
+            text += el.innerText + ' ';
+            if (text.length > 3000) break;
+          }
+        } catch { }
+        if (text.length > 3000) break;
+      }
+      if (text.trim()) return text.substring(0, 3000);
+    }
   }
 
-  return detectContentLang();
+  const mainEl = document.querySelector('main, [role="main"], article');
+  if (mainEl) {
+    text = mainEl.innerText;
+    if (text.trim()) return text.substring(0, 3000);
+  }
+
+  const articles = document.querySelectorAll('article, [role="article"]');
+  for (const a of articles) {
+    text += a.innerText + ' ';
+    if (text.length > 3000) break;
+  }
+  if (text.trim()) return text.substring(0, 3000);
+
+  const body = document.body;
+  if (!body) return '';
+  const clone = body.cloneNode(true);
+  const uiTags = clone.querySelectorAll('nav, header, footer, aside, [role="navigation"], [role="banner"], [role="contentinfo"], [role="complementary"]');
+  uiTags.forEach(el => el.remove());
+  text = clone.innerText || '';
+  return text.substring(0, 3000);
 }
 
-function shouldSkipTranslation(targetLang) {
-  const declaredLang = detectPageLang();
-  const contentLang = detectContentLang();
+function shouldSkipTranslation(targetLang, rule) {
+  const contentLang = detectContentLang(rule);
   const t = (targetLang || '').split('-')[0].toLowerCase();
 
-  if (!declaredLang && !contentLang) return false;
+  if (!contentLang) return false;
 
-  const declaredMatch = declaredLang && (declaredLang === t || (t === 'zh' && declaredLang === 'zh'));
-  const contentMatch = contentLang && (contentLang === t || (t === 'zh' && contentLang === 'zh'));
-
-  if (declaredMatch && contentMatch) return true;
-  if (declaredMatch && !contentMatch && contentLang) return false;
-  if (contentMatch) return true;
-
-  return false;
+  return contentLang === t;
 }
 function lsGet(key) {
   try {
@@ -83,10 +111,10 @@ function lsRemove(key) {
 }
 
 let S = {
-  selTL: "en", inputSL: "auto", inputTL: "en", pgTL: "en",
+  selTL: "zh-CN", inputSL: "auto", inputTL: "zh-CN", pgTL: "zh-CN",
   enSel: true, enInput: true, enPage: true, enFloat: true, autoTranslate: true,
   ignLangs: [], selEngine: "google", inputEngine: "google", pgEngine: "google",
-  blacklist: [], autoBlacklist: [], rulesUrl: ""
+  blacklist: [], autoBlacklist: [], rulesUrl: "", allowRemoteTTS: true
 };
 let ready = false;
 let isBlacklisted = false;
@@ -150,6 +178,8 @@ async function handleSpaNavigation() {
   } catch { }
 
   if (siteRule) {
+    pageLangDisabled = shouldSkipTranslation(targetLang, siteRule);
+    if (pageLangDisabled) return;
     if (S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
       pgTranslating = true;
       await applyPageRule(siteRule, "auto", targetLang, S.pgEngine || "google");
@@ -157,7 +187,7 @@ async function handleSpaNavigation() {
       updateToolbarIcon();
     }
   } else {
-    pageLangDisabled = shouldSkipTranslation(targetLang);
+    pageLangDisabled = shouldSkipTranslation(targetLang, null);
     if (pageLangDisabled) return;
     if (S.autoTranslate && !isAutoBlacklisted) {
       siteRule = GENERIC_RULE;
@@ -206,16 +236,7 @@ function updateToolbarIcon() {
 
 function revertPageTranslation() {
   stopObserver();
-  document.querySelectorAll("[data-snap-translated='page']").forEach((el) => {
-    if (el.hasAttribute('data-snap-original')) {
-      const original = el.getAttribute('data-snap-original');
-      const textNode = document.createTextNode(original);
-      el.parentNode.replaceChild(textNode, el);
-    }
-  });
-  document.querySelectorAll("[data-snap-translated='fixed']").forEach((el) => {
-    el.removeAttribute("data-snap-translated");
-  });
+  revertTranslation();
   pgTranslating = false;
   if (float) float.classList.remove("tr-translated");
   updateToolbarIcon();
@@ -369,7 +390,8 @@ async function startPageTranslate() {
     showToast("此网站已在网页翻译黑名单中");
     return;
   }
-  if (!siteRule && pageLangDisabled) {
+  const targetLang = S.pgTL || S.selTL;
+  if (shouldSkipTranslation(targetLang, siteRule)) {
     showToast("此页面语言与目标语言相同，无需翻译");
     return;
   }
@@ -404,7 +426,7 @@ document.addEventListener("mouseup", (e) => {
   setLastY(e.clientY);
   setTimeout(() => {
     if (isOwn(e.target)) return;
-    const sel = getSelection();
+    const sel = getSelection(e);
     if (!sel) { clearAll(); return; }
     if (sel.isInput && !S.enInput) return;
     if (!sel.isInput && !S.enSel) return;
@@ -485,8 +507,9 @@ async function init() {
   } catch { }
 
   if (siteRule) {
-    if (S.enPage && S.enFloat) createFloat();
-    if (S.enPage && S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
+    pageLangDisabled = shouldSkipTranslation(targetLang, siteRule);
+    if (S.enPage && !pageLangDisabled && S.enFloat) createFloat();
+    if (S.enPage && !pageLangDisabled && S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
       pgTranslating = true;
       const st = await showTransStatus(`匹配规则: ${siteRule.name}，自动翻译`);
       await applyPageRule(siteRule, "auto", targetLang, S.pgEngine || "google");
@@ -495,7 +518,7 @@ async function init() {
       updateToolbarIcon();
     }
   } else {
-    pageLangDisabled = shouldSkipTranslation(targetLang);
+    pageLangDisabled = shouldSkipTranslation(targetLang, null);
     if (S.enPage && !pageLangDisabled && S.enFloat) createFloat();
     if (S.enPage && !pageLangDisabled && S.autoTranslate && !isAutoBlacklisted) {
       siteRule = GENERIC_RULE;
@@ -550,7 +573,7 @@ async function init() {
     if (changes.settings) {
       S = { ...S, ...changes.settings.newValue };
       const newTargetLang = S.pgTL || S.selTL;
-      pageLangDisabled = shouldSkipTranslation(newTargetLang);
+      pageLangDisabled = shouldSkipTranslation(newTargetLang, siteRule);
       isBlacklisted = checkBlacklist(location.hostname, S.blacklist || []);
       isAutoBlacklisted = checkBlacklist(location.hostname, S.autoBlacklist || []);
       if (S.enFloat && !isBlacklisted && (siteRule || !pageLangDisabled) && !sessionDisabled) createFloat();

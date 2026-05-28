@@ -21,13 +21,6 @@
     { id: "bing", name: "Bing" },
   ];
 
-  const IGNORE_TAGS = new Set([
-    "SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "SELECT",
-    "CODE", "KBD", "SVG", "MATH", "INPUT", "BUTTON",
-    "IMG", "VIDEO", "AUDIO", "IFRAME", "OBJECT", "EMBED",
-    "CANVAS", "MAP", "AREA", "TRACK", "WBR", "BR",
-  ]);
-
   const TTS_LANG_MAP = {
     "auto": "en", "zh-CN": "zh-CN", "zh-TW": "zh-TW", "en": "en",
     "ja": "ja", "ko": "ko", "fr": "fr", "de": "de", "es": "es",
@@ -36,17 +29,30 @@
   };
 
   function detectTextLang(text) {
-    if (/[\u4e00-\u9fff]/.test(text)) {
-      if (!/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "zh-CN";
-    }
-    if (/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "ja";
-    if (/[\uac00-\ud7af]/.test(text)) return "ko";
-    if (/[\u0400-\u04ff]/.test(text)) return "ru";
-    if (/[\u0600-\u06ff]/.test(text)) return "ar";
-    if (/[\u0e00-\u0e7f]/.test(text)) return "th";
-    if (/[\u0100-\u01ef\u0300-\u033f]/.test(text)) return "vi";
-    if (/[\u0900-\u097f]/.test(text)) return "hi";
-    if (/[a-zA-Z]/.test(text)) return "en";
+    if (!text) return null;
+    const stripped = text.replace(/[\s\d!"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~\u00A0-\u00BF\u2000-\u206F\u3000-\u303F]/g, '');
+    const total = stripped.length;
+    if (total < 2) return null;
+
+    const zh = (stripped.match(/[\u4e00-\u9fff]/g) || []).length;
+    const ja = (stripped.match(/[\u3040-\u309f\u30a0-\u30ff]/g) || []).length;
+    const ko = (stripped.match(/[\uac00-\ud7af]/g) || []).length;
+    const ru = (stripped.match(/[\u0400-\u04ff]/g) || []).length;
+    const ar = (stripped.match(/[\u0600-\u06ff]/g) || []).length;
+    const th = (stripped.match(/[\u0e00-\u0e7f]/g) || []).length;
+    const vi = (stripped.match(/[\u0100-\u01ef\u0300-\u033f]/g) || []).length;
+    const hi = (stripped.match(/[\u0900-\u097f]/g) || []).length;
+    const en = (stripped.match(/[a-zA-Z]/g) || []).length;
+
+    if (ko / total > 0.1) return "ko";
+    if (ja / total > 0.1) return "ja";
+    if (zh * 2.5 / total > 0.5) return "zh-CN";
+    if (ru > total * 0.4) return "ru";
+    if (ar > total * 0.4) return "ar";
+    if (th > total * 0.4) return "th";
+    if (vi > total * 0.4) return "vi";
+    if (hi > total * 0.4) return "hi";
+    if (en > total * 0.3) return "en";
     return null;
   }
 
@@ -367,14 +373,203 @@
     });
   }
 
+  const NON_TEXT_INPUT_TYPES = new Set([
+    "checkbox", "radio", "submit", "reset", "button", "image",
+    "file", "hidden", "range", "color", "date", "datetime-local",
+    "month", "week", "time", "number",
+  ]);
+
   function isEditable(el) {
-    return !!(el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable));
+    if (!el) return false;
+    if (el.tagName === "TEXTAREA") return true;
+    if (el.tagName === "INPUT") {
+      const type = (el.getAttribute("type") || "text").toLowerCase();
+      if (NON_TEXT_INPUT_TYPES.has(type)) return false;
+      return !el.disabled && !el.readOnly;
+    }
+    if (el.isContentEditable) return true;
+    return false;
   }
 
-  function doReplace(translated, actInput, selText, showToastFn) {
+  function getDeepActiveElement(doc, skipSelf) {
+    doc = doc || document;
+    let el = doc.activeElement;
+    if (!el || el === doc.body) return null;
+    if (el.shadowRoot) {
+      const deep = getDeepActiveElement(el.shadowRoot, false);
+      if (deep) return deep;
+    }
+    try {
+      if (el.contentDocument && el.contentDocument.body) {
+        const deep = getDeepActiveElement(el.contentDocument, false);
+        if (deep) return deep;
+      }
+    } catch {}
+    if (skipSelf && !isEditable(el)) {
+      return null;
+    }
+    return el;
+  }
+
+  function tryPasteStrategy(input, translated, selectedText) {
+    try {
+      const st = input.selectionStart;
+      const en = input.selectionEnd;
+      if (input.value.substring(st, en) !== selectedText) return false;
+
+      const before = input.value.substring(0, st);
+      const after = input.value.substring(en);
+      const dataTransfer = new DataTransfer();
+      dataTransfer.setData("text/plain", translated);
+      const pasteEvent = new ClipboardEvent("paste", {
+        bubbles: true,
+        cancelable: true,
+        clipboardData: dataTransfer,
+      });
+      input.value = before + translated + after;
+      const newCursor = st + translated.length;
+      input.setSelectionRange(newCursor, newCursor);
+      input.dispatchEvent(pasteEvent);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function tryExecCommandInsert(input, translated, selectedText) {
+    try {
+      input.focus();
+      const st = input.selectionStart;
+      const en = input.selectionEnd;
+      if (input.value.substring(st, en) !== selectedText) return false;
+      input.setSelectionRange(st, en);
+      document.execCommand("insertText", false, translated);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function tryDirectValueSet(input, translated, selectedText) {
+    try {
+      const st = input.selectionStart;
+      const en = input.selectionEnd;
+      if (input.value.substring(st, en) !== selectedText) return false;
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype, "value"
+      )?.set || Object.getOwnPropertyDescriptor(
+        window.HTMLTextAreaElement.prototype, "value"
+      )?.set;
+      if (nativeInputValueSetter) {
+        nativeInputValueSetter.call(input, input.value.substring(0, st) + translated + input.value.substring(en));
+      } else {
+        input.setRangeText(translated, st, en, "end");
+      }
+      const newCursor = st + translated.length;
+      input.setSelectionRange(newCursor, newCursor);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function tryTextEvent(input, translated) {
+    try {
+      const textEvent = new TextEvent("textInput", {
+        data: translated,
+        inputType: "insertText",
+      });
+      input.dispatchEvent(textEvent);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function replaceFormElement(input, translated, selectedText) {
+    if (tryPasteStrategy(input, translated, selectedText)) return true;
+    if (tryExecCommandInsert(input, translated, selectedText)) return true;
+    if (tryDirectValueSet(input, translated, selectedText)) return true;
+    if (tryTextEvent(input, translated)) return true;
+    return false;
+  }
+
+  function replaceContentEditable(el, translated, selectedText, savedRange) {
+    const sel = window.getSelection();
+
+    if (savedRange) {
+      try {
+        sel.removeAllRanges();
+        sel.addRange(savedRange);
+      } catch {}
+    }
+
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return false;
+    try {
+      const range = sel.getRangeAt(0);
+      const selected = range.toString();
+      if (selected !== selectedText) return false;
+
+      el.focus();
+      const isRichEditor = el.hasAttribute("data-lexical-editor") ||
+        el.hasAttribute("data-gramm") ||
+        el.hasAttribute("contenteditable") && el.closest('[data-lexical-editor], [data-gramm], .ProseMirror, .ql-editor, .public-DraftEditor-content');
+
+      if (isRichEditor) {
+        return document.execCommand("insertText", false, translated);
+      }
+
+      const beforeInputEvent = new InputEvent("beforeinput", {
+        bubbles: true,
+        cancelable: true,
+        inputType: "insertReplacementText",
+        data: translated,
+      });
+      if (!el.dispatchEvent(beforeInputEvent)) return false;
+
+      range.deleteContents();
+      const textNode = document.createTextNode(translated);
+      range.insertNode(textNode);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+      el.dispatchEvent(new InputEvent("input", {
+        bubbles: true,
+        inputType: "insertReplacementText",
+        data: translated,
+      }));
+      return true;
+    } catch {
+      try {
+        const sel2 = window.getSelection();
+        if (sel2 && sel2.rangeCount) {
+          const range2 = sel2.getRangeAt(0);
+          range2.deleteContents();
+          range2.insertNode(document.createTextNode(translated));
+          range2.collapse(false);
+          sel2.removeAllRanges();
+          sel2.addRange(range2);
+        }
+        return true;
+      } catch {
+        return false;
+      }
+    }
+  }
+
+  function doReplace(translated, actInput, selText, showToastFn, savedRange) {
     if (!actInput || !selText) return;
     try {
       if (actInput.tagName === "INPUT" || actInput.tagName === "TEXTAREA") {
+        if (replaceFormElement(actInput, translated, selText)) {
+          showToastFn("Replaced ✓");
+          return;
+        }
         const st = actInput.selectionStart, en = actInput.selectionEnd;
         if (actInput.value.substring(st, en) !== selText) {
           showToastFn("选择区域已变化，请重新选择");
@@ -383,18 +578,14 @@
         actInput.setRangeText(translated, st, en, "select");
         actInput.dispatchEvent(new Event("input", { bubbles: true }));
         actInput.dispatchEvent(new Event("change", { bubbles: true }));
+        showToastFn("Replaced ✓");
       } else if (actInput.isContentEditable) {
-        const sel = window.getSelection();
-        if (sel && sel.rangeCount) {
-          const range = sel.getRangeAt(0);
-          range.deleteContents();
-          range.insertNode(document.createTextNode(translated));
-          range.collapse(false);
-          sel.removeAllRanges();
-          sel.addRange(range);
+        if (replaceContentEditable(actInput, translated, selText, savedRange)) {
+          showToastFn("Replaced ✓");
+        } else {
+          showToastFn("替换失败");
         }
       }
-      showToastFn("Replaced ✓");
     } catch (e) {
       showToastFn("替换失败");
     }
@@ -409,6 +600,7 @@
   let selText = "";
   let lastX = 0;
   let lastY = 0;
+  let savedRange = null;
   function setTBar(v) { tBar = v; }
   function setPanel(v) { panel = v; }
   function getLastX() { return lastX; }
@@ -423,10 +615,36 @@
     if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null; }
     if (panelTimer) { clearTimeout(panelTimer); panelTimer = null; }
     busy = false;
+    savedRange = null;
   }
 
-  function getSelection() {
-    const ae = document.activeElement;
+  function getSelection(event) {
+    let shadowInput = null;
+    if (event && event.composedPath) {
+      const path = event.composedPath();
+      for (const target of path) {
+        if (target.nodeType === Node.ELEMENT_NODE) {
+          if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") {
+            if (isEditable(target)) {
+              shadowInput = target;
+              break;
+            }
+          }
+          if (target.isContentEditable) break;
+        }
+      }
+    }
+
+    if (shadowInput) {
+      const st = shadowInput.selectionStart, en = shadowInput.selectionEnd;
+      if (st !== en) {
+        actInput = shadowInput;
+        selText = shadowInput.value.substring(st, en);
+        return { text: selText, isInput: true, el: shadowInput };
+      }
+    }
+
+    const ae = getDeepActiveElement(document, true);
     if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) {
       const st = ae.selectionStart, en = ae.selectionEnd;
       if (st !== en) {
@@ -444,9 +662,13 @@
     actInput = null;
     selText = txt;
 
+    if (s.rangeCount > 0) {
+      savedRange = s.getRangeAt(0).cloneRange();
+    }
+
     const an = s.anchorNode;
     if (an) {
-      let p = an.parentElement;
+      let p = an.nodeType === Node.ELEMENT_NODE ? an : an.parentElement;
       while (p) {
         if (p.isContentEditable) { actInput = p; break; }
         p = p.parentElement;
@@ -598,7 +820,7 @@
         attachSpeakHandlers(body);
         attachCopyHandler(body.querySelector(".tr-copy-btn"), r.result);
         const rpBtn = body.querySelector(".tr-replace-btn");
-        if (rpBtn) rpBtn.addEventListener("click", () => { doReplace(r.result, actInput, selText, showToast); clearAll(); });
+        if (rpBtn) rpBtn.addEventListener("click", () => { doReplace(r.result, actInput, selText, showToast, savedRange); clearAll(); });
       } else if (!r.success && panel && loadingEl) {
         loadingEl.outerHTML = `<div class="tr-result" style="color:#ef4444;">Translation failed: ${escHtml(r.error || "unknown error")}</div>`;
         requestAnimationFrame(() => positionPanel(panel, tBar));
@@ -638,7 +860,6 @@
     ".enlighter-code",
     ".rc-CodeBlock",
     "[role=code]",
-    "[role=group]",
     "div[class^=codeBlockContent]",
     "div[class^=codeBlockLines]",
     "table.highlight",
@@ -690,11 +911,41 @@
     "MUNDEROVER", "MTABLE", "MTR", "MTD", "MLABELEDTR",
     "MPADDED", "MPHANTOM", "MSPACE",
   ]);
+
+  const SKIP_TAGS = new Set([
+    "SCRIPT", "STYLE", "NOSCRIPT", "SVG", "MATH", "IFRAME",
+    "OBJECT", "EMBED", "TEMPLATE", "TEXTAREA", "SELECT",
+    "BUTTON", "DIALOG", "FORM", "FIELDSET", "OUTPUT",
+    "CANVAS", "MAP", "AREA", "AUDIO", "VIDEO",
+    "TRACK", "SOURCE", "PICTURE", "SLOT", "PORTAL",
+  ]);
+
+  const INLINE_DISPLAYS = new Set([
+    "inline", "inline-block", "inline-flex", "inline-grid",
+    "inline-table", "ruby", "inline-box",
+  ]);
+
+  const BLOCK_DISPLAYS = new Set([
+    "block", "flex", "grid", "table", "table-row",
+    "table-cell", "table-caption", "list-item",
+    "flow-root", "contents",
+  ]);
+
+  const BLOCK_TAGS = new Set([
+    "DIV", "P", "H1", "H2", "H3", "H4", "H5", "H6",
+    "UL", "OL", "LI", "TABLE", "TR", "TD", "TH",
+    "SECTION", "ARTICLE", "ASIDE", "MAIN", "HEADER",
+    "FOOTER", "NAV", "FIGURE", "FIGCAPTION", "DETAILS",
+    "SUMMARY", "BLOCKQUOTE", "PRE", "HR", "ADDRESS",
+    "FIELDSET", "DL", "DT", "DD",
+  ]);
+
   const SEMANTIC_MARKERS = {
     "header": { "default-translate": "no" },
     "nav": { "side": "1", "default-translate": "no" },
     "footer:last-of-type": { "default-translate": "no" },
   };
+
   function applySemanticMarkers() {
     for (const [sel, attrs] of Object.entries(SEMANTIC_MARKERS)) {
       try {
@@ -707,6 +958,7 @@
       } catch { }
     }
   }
+
   function buildExcludeSet(excludeSelectors) {
     const excluded = new Set();
     for (const sel of UNIVERSAL_EXCLUDE_SELECTORS) {
@@ -720,6 +972,18 @@
     }
     return excluded;
   }
+
+  function isBlockElement(el) {
+    if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
+    if (BLOCK_TAGS.has(el.tagName)) return true;
+    try {
+      const display = window.getComputedStyle(el).display;
+      if (BLOCK_DISPLAYS.has(display)) return true;
+      if (INLINE_DISPLAYS.has(display)) return false;
+    } catch { }
+    return false;
+  }
+
   function shouldSkipText(text, tl) {
     if (!text) return true;
     const trimmed = text.trim();
@@ -730,13 +994,16 @@
     const words = trimmed.split(/\s+/).filter(w => /\w/.test(w));
     if (words.length < 1) return true;
     if (tl) {
-      const tlLower = tl.toLowerCase();
-      if (tlLower.startsWith("zh") && /[\u4e00-\u9fff]/.test(trimmed)) return true;
-      if (tlLower === "ja" && /[\u3040-\u309f\u30a0-\u30ff]/.test(trimmed)) return true;
-      if (tlLower === "ko" && /[\uac00-\ud7af]/.test(trimmed)) return true;
+      const detected = detectTextLang(trimmed);
+      if (detected) {
+        const tlPrefix = tl.toLowerCase().split('-')[0];
+        const detectedPrefix = detected.toLowerCase().split('-')[0];
+        if (tlPrefix === detectedPrefix) return true;
+      }
     }
     return false;
   }
+
   function shouldSkipElement(el, excluded) {
     while (el) {
       if (excluded.has(el)) return true;
@@ -745,11 +1012,27 @@
     return false;
   }
 
+  function shouldSkipByVisibility(el) {
+    if (!el) return false;
+    try {
+      const style = window.getComputedStyle(el);
+      if (style.display === 'none') return true;
+      if (style.visibility === 'hidden') return true;
+      const opacityVal = parseFloat(style.opacity);
+      if (!isNaN(opacityVal) && opacityVal === 0) return true;
+      if (el.offsetWidth === 0 && el.offsetHeight === 0) return true;
+    } catch { }
+    return false;
+  }
+
   const MARKER = 'data-snap-translated';
+  const WRAPPER_CLASS = 'snap-target-wrapper';
+  const INNER_CLASS = 'snap-target-inner';
   const MAX_TEXT_LENGTH_PER_REQUEST = 1800;
-  const MAX_TEXT_GROUP_LENGTH = 50;
+  const SCROLL_LIMIT_SCREENS = 2;
   const TRANSLATION_CACHE_KEY_PREFIX = 'tr-cache:';
-  const DEFER_CHARS_PER_FRAME = 5000;
+  const DEFER_CHARS_PER_FRAME = 8000;
+  const CONCURRENT_BATCHES = 3;
 
   let injectedCssCache = new Set();
 
@@ -796,202 +1079,183 @@
     }
   }
 
-  function collectVisibleTextNodes(root, excluded, skipTags) {
-    const nodes = [];
-    try {
-      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
-      while (walker.nextNode()) {
-        const node = walker.currentNode;
-        const text = node.textContent.trim();
-        if (!text) continue;
-        const parent = node.parentElement;
-        if (!parent) continue;
-        if (parent.closest(`[${MARKER}]`)) continue;
-        if (shouldSkipElement(parent, excluded)) continue;
-        if (skipTags.has(parent.tagName)) continue;
-        nodes.push(node);
-      }
-    } catch { }
-    return nodes;
+  function injectBaseStyles() {
+    const styleId = 'snap-base-styles';
+    if (document.getElementById(styleId)) return;
+    const css = `
+.${WRAPPER_CLASS} { display: inline; }
+.${INNER_CLASS} { display: inline; }
+.${ORIGINAL_CLASS} { display: none !important; }
+  `.trim();
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = css;
+    document.head.appendChild(style);
   }
 
-  function walkShadowText(root, excluded, skipTags, nodes, excludeSlots, enterShadow) {
-    if (root.nodeType === Node.ELEMENT_NODE) {
-      if (excludeSlots?.length) {
-        const slot = root.getAttribute('slot');
-        if (slot && excludeSlots.includes(slot)) return;
+  let markedNodes = new WeakSet();
+
+  function isMarked(node) {
+    if (!node) return false;
+    if (node.nodeType === Node.ELEMENT_NODE && node.hasAttribute(MARKER)) return true;
+    if (node.nodeType === Node.TEXT_NODE && node.parentElement && node.parentElement.hasAttribute(MARKER)) return true;
+    return markedNodes.has(node);
+  }
+
+  function markNode(node) {
+    if (node) markedNodes.add(node);
+  }
+
+  function collectParagraphs(root, excluded, rule) {
+    const paragraphs = [];
+    let currentNodes = [];
+    let currentText = '';
+    let currentBlockRoot = null;
+
+    function flushParagraph() {
+      if (currentNodes.length === 0) return;
+      const text = currentText.trim();
+      if (!text || text.length < 2) {
+        currentNodes = [];
+        currentText = '';
+        currentBlockRoot = null;
+        return;
       }
+      paragraphs.push({
+        nodes: [...currentNodes],
+        text: currentText.trim(),
+        blockRoot: currentBlockRoot,
+      });
+      currentNodes = [];
+      currentText = '';
+      currentBlockRoot = null;
     }
-    if (root.nodeType === Node.TEXT_NODE) {
-      const parent = root.parentElement;
+
+    function addTextNode(node) {
+      if (isMarked(node)) return;
+      const text = node.textContent;
+      if (!text.trim()) return;
+      const parent = node.parentElement;
       if (!parent) return;
-      if (parent.closest(`[${MARKER}]`)) return;
+      if (SKIP_TAGS.has(parent.tagName)) return;
+      if (STAY_ORIGINAL_TAGS.has(parent.tagName)) return;
+      if (parent.classList?.contains(ORIGINAL_CLASS) || parent.classList?.contains(INNER_CLASS)) return;
       if (shouldSkipElement(parent, excluded)) return;
-      if (skipTags.has(parent.tagName)) return;
-      if (!root.textContent.trim()) return;
-      nodes.push(root);
-      return;
+      if (shouldSkipByVisibility(parent)) return;
+      currentNodes.push(node);
+      currentText += text;
+      markNode(node);
     }
-    if (enterShadow !== false && root.shadowRoot) {
-      walkShadowText(root.shadowRoot, excluded, skipTags, nodes, excludeSlots, enterShadow);
-    }
-    let child = root.firstChild;
-    while (child) {
-      walkShadowText(child, excluded, skipTags, nodes, excludeSlots, enterShadow);
-      child = child.nextSibling;
-    }
-  }
 
-  function collectByContainerMode(rule) {
-    const containers = document.querySelectorAll(rule.containerSelector);
-    if (!containers.length) return [];
-    const excluded = buildExcludeSet(rule.excludeSelectors);
-    if (rule.excludeSlots?.length) {
-      for (const container of containers) {
-        const allElements = container.querySelectorAll('*');
-        for (let i = 0; i < allElements.length; i++) {
-          const slot = allElements[i].getAttribute('slot');
-          if (slot && rule.excludeSlots.includes(slot)) excluded.add(allElements[i]);
-        }
+    function walkDOM(el) {
+      if (!el) return;
+      if (el.nodeType === Node.TEXT_NODE) {
+        addTextNode(el);
+        return;
+      }
+      if (el.nodeType !== Node.ELEMENT_NODE) return;
+      if (SKIP_TAGS.has(el.tagName)) return;
+      if (el.classList?.contains(ORIGINAL_CLASS) || el.classList?.contains(INNER_CLASS)) return;
+      if (isMarked(el)) return;
+      if (shouldSkipElement(el, excluded)) return;
+      if (shouldSkipByVisibility(el)) return;
+      if (el.tagName === 'IFRAME') {
+        try {
+          if (el.contentDocument && el.contentDocument.body) {
+            walkDOM(el.contentDocument.body);
+          }
+        } catch { }
+        return;
+      }
+      if (el.shadowRoot) {
+        walkDOM(el.shadowRoot);
+      }
+      const isBlock = isBlockElement(el);
+      if (isBlock && currentNodes.length > 0) {
+        flushParagraph();
+      }
+      if (isBlock) {
+        currentBlockRoot = el;
+      }
+      let child = el.firstChild;
+      while (child) {
+        walkDOM(child);
+        child = child.nextSibling;
+      }
+      if (isBlock && currentNodes.length > 0) {
+        flushParagraph();
       }
     }
-    const blockTags = new Set(rule.extraBlockSelectors || []);
-    const skipTags = new Set([...IGNORE_TAGS, ...(rule.extraBlockTags || []), ...STAY_ORIGINAL_TAGS, ...blockTags]);
-    const nodes = [];
-    const enterShadow = !rule.shadowSelectors?.length;
-    for (const root of containers) {
-      walkShadowText(root, excluded, skipTags, nodes, rule.excludeSlots, enterShadow);
-    }
-    if (rule.shadowSelectors?.length) {
-      for (const sel of rule.shadowSelectors) {
-        const parts = sel.split(' >>> ');
-        if (parts.length === 2) {
-          const hosts = document.querySelectorAll(parts[0]);
-          for (const host of hosts) {
-            if (host.shadowRoot) {
-              const targets = host.shadowRoot.querySelectorAll(parts[1]);
-              for (const target of targets) {
-                if (target.getAttribute(MARKER)) continue;
-                if (excluded.has(target)) continue;
-                const inner = collectVisibleTextNodes(target, excluded, skipTags);
-                nodes.push(...inner);
+
+    if (rule.selectors?.length) {
+      for (const sel of rule.selectors) {
+        if (sel.includes(' >>> ')) {
+          const parts = sel.split(' >>> ');
+          if (parts.length === 2) {
+            const hosts = document.querySelectorAll(parts[0]);
+            for (const host of hosts) {
+              if (host.shadowRoot) {
+                const targets = host.shadowRoot.querySelectorAll(parts[1]);
+                for (const target of targets) {
+                  walkDOM(target);
+                }
               }
             }
           }
         } else {
-          for (const el of document.querySelectorAll(sel)) {
-            if (el.getAttribute(MARKER)) continue;
-            if (excluded.has(el)) continue;
-            const inner = collectVisibleTextNodes(el, excluded, skipTags);
-            nodes.push(...inner);
+          const els = document.querySelectorAll(sel);
+          for (const el of els) {
+            walkDOM(el);
           }
-        }
-      }
-    }
-    return nodes;
-  }
-
-  function collectBySelectMode(rule) {
-    const selectors = rule.selectors;
-    if (!selectors?.length) return [];
-    const excluded = buildExcludeSet(rule.excludeSelectors);
-    const blockTags = new Set(rule.extraBlockSelectors || []);
-    const skipTags = new Set([...IGNORE_TAGS, ...STAY_ORIGINAL_TAGS, ...blockTags]);
-    const nodes = [];
-    for (const sel of selectors) {
-      if (sel.includes(' >>> ')) {
-        const parts = sel.split(' >>> ');
-        if (parts.length === 2) {
-          const hosts = document.querySelectorAll(parts[0]);
-          for (const host of hosts) {
-            if (host.shadowRoot) {
-              const targets = host.shadowRoot.querySelectorAll(parts[1]);
-              for (const target of targets) {
-                if (target.getAttribute(MARKER)) continue;
-                if (excluded.has(target)) continue;
-                const inner = collectVisibleTextNodes(target, excluded, skipTags);
-                nodes.push(...inner);
+          for (const host of document.querySelectorAll('*')) {
+            if (!host.shadowRoot) continue;
+            try {
+              const shadowEls = host.shadowRoot.querySelectorAll(sel);
+              for (const el of shadowEls) {
+                walkDOM(el);
               }
-            }
+            } catch { }
           }
-        }
-      } else if (sel.includes(' -> ')) {
-        const parts = sel.split(' -> ').map(s => s.trim());
-        let current = document;
-        for (let i = 0; i < parts.length; i++) {
-          const isLast = i === parts.length - 1;
-          const found = current.querySelectorAll(parts[i]);
-          if (!found.length) break;
-          if (isLast) {
-            for (const el of found) {
-              if (el.getAttribute(MARKER)) continue;
-              if (excluded.has(el)) continue;
-              const inner = collectVisibleTextNodes(el, excluded, skipTags);
-              nodes.push(...inner);
-            }
-          } else {
-            const next = found[0];
-            current = next.shadowRoot || next;
-          }
-        }
-      } else {
-        let els = document.querySelectorAll(sel);
-        for (const el of els) {
-          if (el.getAttribute(MARKER)) continue;
-          if (excluded.has(el)) continue;
-          const inner = collectVisibleTextNodes(el, excluded, skipTags);
-          nodes.push(...inner);
-        }
-        for (const host of document.querySelectorAll('*')) {
-          if (!host.shadowRoot) continue;
-          try {
-            els = host.shadowRoot.querySelectorAll(sel);
-            for (const el of els) {
-              if (el.getAttribute(MARKER)) continue;
-              if (excluded.has(el)) continue;
-              const inner = collectVisibleTextNodes(el, excluded, skipTags);
-              nodes.push(...inner);
-            }
-          } catch { }
         }
       }
+    } else if (rule.containerSelector) {
+      const containers = document.querySelectorAll(rule.containerSelector);
+      for (const container of containers) {
+        walkDOM(container);
+      }
+    } else {
+      walkDOM(root);
     }
-    return nodes;
+
+    flushParagraph();
+    return paragraphs;
   }
 
-  function collectTargetNodes(rule) {
-    if (rule.selectors?.length) return collectBySelectMode(rule);
-    return collectByContainerMode(rule);
+  function isInViewport(el, screens) {
+    if (!el) return true;
+    const rect = el.getBoundingClientRect();
+    const vh = window.innerHeight;
+    const maxScroll = vh * (SCROLL_LIMIT_SCREENS);
+    return rect.top < vh + maxScroll && rect.bottom > -maxScroll;
   }
 
-  function splitTextIntoGroups(nodes, maxLength, maxGroupLength) {
-    const groups = [];
-    let currentGroup = [];
+  function splitParagraphsIntoBatches(paragraphs, maxLength) {
+    const batches = [];
+    let currentBatch = [];
     let currentLength = 0;
-    for (const node of nodes) {
-      const text = node.textContent.trim();
-      if (!text) continue;
-      if (text.length > maxLength) {
-        if (currentGroup.length) {
-          groups.push(currentGroup);
-          currentGroup = [];
-          currentLength = 0;
-        }
-        groups.push([node]);
-        continue;
+
+    for (const para of paragraphs) {
+      const text = para.text;
+      if (currentLength + text.length > maxLength && currentBatch.length > 0) {
+        batches.push(currentBatch);
+        currentBatch = [];
+        currentLength = 0;
       }
-      if (currentLength + text.length > maxLength || currentGroup.length >= maxGroupLength) {
-        if (currentGroup.length) {
-          groups.push(currentGroup);
-          currentGroup = [];
-          currentLength = 0;
-        }
-      }
-      currentGroup.push(node);
+      currentBatch.push(para);
       currentLength += text.length;
     }
-    if (currentGroup.length) groups.push(currentGroup);
-    return groups;
+    if (currentBatch.length) batches.push(currentBatch);
+    return batches;
   }
 
   let translationCache = new Map();
@@ -1033,94 +1297,198 @@
     } catch { }
   }
 
-  async function translateNodes(nodes, sl, tl, engine, languageFilter) {
+  const ORIGINAL_CLASS = 'snap-original';
+
+  function insertTranslationForParagraph(para, translatedText) {
+    const nodes = para.nodes;
     if (!nodes.length) return 0;
-    const maxLength = MAX_TEXT_LENGTH_PER_REQUEST;
-    const maxGroupLength = MAX_TEXT_GROUP_LENGTH;
-    const groups = splitTextIntoGroups(nodes, maxLength, maxGroupLength);
+
+    const firstNode = nodes[0];
+    const lastNode = nodes[nodes.length - 1];
+    const parent = firstNode.parentElement;
+    if (!parent) return 0;
+
+    const refNode = lastNode.nextSibling;
+
+    const wrapper = document.createElement('span');
+    wrapper.className = WRAPPER_CLASS;
+    wrapper.setAttribute(MARKER, 'page');
+
+    const originalContainer = document.createElement('span');
+    originalContainer.className = ORIGINAL_CLASS;
+    originalContainer.style.display = 'none';
+    for (const node of nodes) {
+      if (node.parentNode) {
+        node.parentNode.removeChild(node);
+      }
+      originalContainer.appendChild(node);
+    }
+    wrapper.appendChild(originalContainer);
+
+    const inner = document.createElement('span');
+    inner.className = INNER_CLASS;
+    inner.textContent = translatedText;
+    wrapper.appendChild(inner);
+
+    if (refNode && refNode.parentNode === parent) {
+      parent.insertBefore(wrapper, refNode);
+    } else {
+      parent.appendChild(wrapper);
+    }
+
+    return 1;
+  }
+
+  async function translateBatch(batch, sl, tl, engine, languageFilter) {
+    const texts = [];
+    const parasToTranslate = [];
+
+    for (const para of batch) {
+      if (shouldSkipText(para.text, languageFilter === 'skip-target' ? tl : null)) continue;
+      const key = getCacheKey(para.text, sl, tl, engine);
+      const cached = cacheGet(key);
+      if (cached) {
+        insertTranslationForParagraph(para, cached);
+        continue;
+      }
+      texts.push(para.text);
+      parasToTranslate.push({ para, key });
+    }
+
+    if (!parasToTranslate.length) return;
+
+    for (const { para } of parasToTranslate) {
+      const placeholder = document.createElement('span');
+      placeholder.className = 'tr-translating';
+      placeholder.setAttribute(MARKER, 'translating');
+      placeholder.textContent = '...';
+      const firstNode = para.nodes[0];
+      const parent = firstNode?.parentElement;
+      if (parent) {
+        const lastNode = para.nodes[para.nodes.length - 1];
+        const refNode = lastNode.nextSibling;
+        const originalContainer = document.createElement('span');
+        originalContainer.className = ORIGINAL_CLASS;
+        originalContainer.style.display = 'none';
+        for (const node of para.nodes) {
+          if (node.parentNode) node.parentNode.removeChild(node);
+          originalContainer.appendChild(node);
+        }
+        placeholder.appendChild(originalContainer);
+        if (refNode && refNode.parentNode === parent) {
+          parent.insertBefore(placeholder, refNode);
+        } else {
+          parent.appendChild(placeholder);
+        }
+        para._placeholder = placeholder;
+      }
+    }
+
+    try {
+      const r = await sendMessage({
+        action: "translateBatch",
+        texts,
+        sourceLang: sl,
+        targetLang: tl,
+        engine
+      });
+
+      if (r?.success && Array.isArray(r.results)) {
+        for (let i = 0; i < parasToTranslate.length; i++) {
+          const { para, key } = parasToTranslate[i];
+          const resultText = r.results[i];
+          if (resultText == null) continue;
+          cacheSet(key, resultText);
+          const placeholder = para._placeholder;
+          if (!placeholder || !placeholder.parentNode) continue;
+          const origContainer = placeholder.querySelector(`.${ORIGINAL_CLASS}`);
+          const wrapper = document.createElement('span');
+          wrapper.className = WRAPPER_CLASS;
+          wrapper.setAttribute(MARKER, 'page');
+          if (origContainer) wrapper.appendChild(origContainer);
+          const inner = document.createElement('span');
+          inner.className = INNER_CLASS;
+          inner.textContent = resultText;
+          wrapper.appendChild(inner);
+          placeholder.parentNode.replaceChild(wrapper, placeholder);
+        }
+      } else {
+        for (const { para } of parasToTranslate) {
+          restorePlaceholder(para);
+        }
+      }
+    } catch {
+      for (const { para } of parasToTranslate) {
+        restorePlaceholder(para);
+      }
+    }
+  }
+
+  function restorePlaceholder(para) {
+    const placeholder = para._placeholder;
+    if (!placeholder || !placeholder.parentNode) return;
+    const origContainer = placeholder.querySelector(`.${ORIGINAL_CLASS}`);
+    if (origContainer) {
+      const fragment = document.createDocumentFragment();
+      while (origContainer.firstChild) {
+        fragment.appendChild(origContainer.firstChild);
+      }
+      placeholder.parentNode.replaceChild(fragment, placeholder);
+    } else {
+      const fragment = document.createDocumentFragment();
+      for (const node of para.nodes) {
+        if (node) fragment.appendChild(node);
+      }
+      if (fragment.childNodes.length) {
+        placeholder.parentNode.replaceChild(fragment, placeholder);
+      } else {
+        placeholder.remove();
+      }
+    }
+  }
+
+  async function translateParagraphs(paragraphs, sl, tl, engine, languageFilter) {
+    if (!paragraphs.length) return 0;
+
+    const inViewport = [];
+    const outOfViewport = [];
+    for (const para of paragraphs) {
+      const rootEl = para.blockRoot || (para.nodes[0]?.parentElement);
+      if (isInViewport(rootEl)) {
+        inViewport.push(para);
+      } else {
+        outOfViewport.push(para);
+      }
+    }
+
+    const inViewportBatches = splitParagraphsIntoBatches(inViewport, MAX_TEXT_LENGTH_PER_REQUEST);
+    const outOfViewportBatches = splitParagraphsIntoBatches(outOfViewport, MAX_TEXT_LENGTH_PER_REQUEST);
+
     let translated = 0;
     let charsThisFrame = 0;
-    for (const group of groups) {
-      const toTranslate = [];
-      const cached = [];
-      for (const node of group) {
-        const text = node.textContent.trim();
-        if (shouldSkipText(text, languageFilter === 'skip-target' ? tl : null)) continue;
-        const key = getCacheKey(text, sl, tl, engine);
-        const cachedResult = cacheGet(key);
-        if (cachedResult) {
-          cached.push({ node, text: cachedResult, original: text });
-        } else {
-          toTranslate.push({ node, text, key });
-        }
-      }
-      for (const { node, text, original } of cached) {
-        if (!node.parentNode) continue;
-        const span = document.createElement('span');
-        span.textContent = text;
-        span.setAttribute(MARKER, 'page');
-        span.setAttribute('data-snap-original', original);
-        node.parentNode.replaceChild(span, node);
-        translated++;
-      }
-      if (toTranslate.length) {
-        const texts = toTranslate.map(t => t.text);
-        for (const { node } of toTranslate) {
-          if (!node.parentNode) continue;
-          const placeholder = document.createElement('span');
-          placeholder.className = 'tr-translating';
-          placeholder.setAttribute(MARKER, 'translating');
-          placeholder.textContent = node.textContent;
-          node.parentNode.replaceChild(placeholder, node);
-          node._placeholder = placeholder;
-        }
-        try {
-          const r = await sendMessage({
-            action: "translateBatch",
-            texts,
-            sourceLang: sl,
-            targetLang: tl,
-            engine
-          });
-          if (r?.success && Array.isArray(r.results)) {
-            for (let i = 0; i < toTranslate.length; i++) {
-              const { node, key } = toTranslate[i];
-              const resultText = r.results[i];
-              if (resultText == null) continue;
-              const placeholder = node._placeholder;
-              if (!placeholder || !placeholder.parentNode) continue;
-              const original = node.textContent.trim();
-              cacheSet(key, resultText);
-              const span = document.createElement('span');
-              span.textContent = resultText;
-              span.setAttribute(MARKER, 'page');
-              span.setAttribute('data-snap-original', original);
-              placeholder.parentNode.replaceChild(span, placeholder);
-              translated++;
-            }
-          } else {
-            for (const { node } of toTranslate) {
-              const ph = node._placeholder;
-              if (ph && ph.parentNode) {
-                ph.parentNode.replaceChild(node, ph);
-              }
-            }
-          }
-        } catch {
-          for (const { node } of toTranslate) {
-            const ph = node._placeholder;
-            if (ph && ph.parentNode) {
-              ph.parentNode.replaceChild(node, ph);
-            }
-          }
-        }
-      }
-      charsThisFrame += group.reduce((sum, node) => sum + node.textContent.length, 0);
+
+    for (let i = 0; i < inViewportBatches.length; i += CONCURRENT_BATCHES) {
+      const chunk = inViewportBatches.slice(i, i + CONCURRENT_BATCHES);
+      await Promise.all(chunk.map(batch => translateBatch(batch, sl, tl, engine, languageFilter)));
+      translated += chunk.reduce((sum, batch) => sum + batch.length, 0);
+      charsThisFrame += chunk.reduce((sum, batch) => sum + batch.reduce((s, p) => s + p.text.length, 0), 0);
       if (charsThisFrame >= DEFER_CHARS_PER_FRAME) {
         await new Promise(r => requestAnimationFrame(r));
         charsThisFrame = 0;
       }
     }
+
+    for (let i = 0; i < outOfViewportBatches.length; i += CONCURRENT_BATCHES) {
+      const chunk = outOfViewportBatches.slice(i, i + CONCURRENT_BATCHES);
+      await Promise.all(chunk.map(batch => translateBatch(batch, sl, tl, engine, languageFilter)));
+      translated += chunk.reduce((sum, batch) => sum + batch.length, 0);
+      charsThisFrame += chunk.reduce((sum, batch) => sum + batch.reduce((s, p) => s + p.text.length, 0), 0);
+      if (charsThisFrame >= DEFER_CHARS_PER_FRAME) {
+        await new Promise(r => requestAnimationFrame(r));
+        charsThisFrame = 0;
+      }
+    }
+
     return translated;
   }
 
@@ -1135,17 +1503,39 @@
   async function retranslate() {
     if (retranslateTimer) return;
     retranslateTimer = setTimeout(() => { retranslateTimer = null; }, 300);
-    const nodes = collectTargetNodes(currentRule);
-    if (nodes.length) {
-      await translateNodes(nodes, currentSl, currentTl, currentEngine, currentRule.languageFilter);
+    const excluded = buildExcludeSet(currentRule?.excludeSelectors);
+    const paragraphs = collectParagraphs(document.body, excluded, currentRule || {});
+    if (paragraphs.length) {
+      await translateParagraphs(paragraphs, currentSl, currentTl, currentEngine, currentRule?.languageFilter);
     }
   }
 
   function startObserver() {
     if (observer) observer.disconnect();
     let pending = false;
-    const callback = () => {
+    const callback = (mutations) => {
       if (pending) return;
+      let shouldProcess = false;
+      for (const mutation of mutations) {
+        if (mutation.type === 'childList') {
+          for (const node of mutation.addedNodes) {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              if (node.classList?.contains('tr-translating') ||
+                  node.classList?.contains(WRAPPER_CLASS) ||
+                  node.hasAttribute?.(MARKER) ||
+                  node.id === 'snap-base-styles' ||
+                  node.id === 'snap-global-styles' ||
+                  node.getAttribute?.('data-snap-css') !== null) {
+                continue;
+              }
+              shouldProcess = true;
+              break;
+            }
+          }
+        }
+        if (shouldProcess) break;
+      }
+      if (!shouldProcess) return;
       pending = true;
       requestAnimationFrame(() => {
         pending = false;
@@ -1198,6 +1588,7 @@
   }
 
   async function applyPageRule(rule, sl, tl, engine) {
+    injectBaseStyles();
     applySemanticMarkers();
     applyFixedElements(rule.fixedElements);
 
@@ -1209,15 +1600,55 @@
     } else if (rule.containerSelector) {
       await waitForContainers(rule.containerSelector);
     }
+
     currentRule = rule;
     currentSl = sl;
     currentTl = tl;
     currentEngine = engine;
-    const nodes = collectTargetNodes(rule);
-    if (nodes.length) {
-      await translateNodes(nodes, sl, tl, engine, rule.languageFilter);
+
+    const excluded = buildExcludeSet(rule.excludeSelectors);
+    const paragraphs = collectParagraphs(document.body, excluded, rule);
+
+    if (paragraphs.length) {
+      await translateParagraphs(paragraphs, sl, tl, engine, rule.languageFilter);
     }
     startObserver();
+  }
+
+  function revertPageTranslation$1() {
+    stopObserver();
+    markedNodes = new WeakSet();
+    document.querySelectorAll(`.${WRAPPER_CLASS}`).forEach(wrapper => {
+      const parent = wrapper.parentNode;
+      if (!parent) return;
+      const originalContainer = wrapper.querySelector(`.${ORIGINAL_CLASS}`);
+      if (originalContainer) {
+        const fragment = document.createDocumentFragment();
+        while (originalContainer.firstChild) {
+          fragment.appendChild(originalContainer.firstChild);
+        }
+        parent.replaceChild(fragment, wrapper);
+      } else {
+        wrapper.remove();
+      }
+    });
+    document.querySelectorAll("[data-snap-translated='fixed']").forEach((el) => {
+      el.removeAttribute(MARKER);
+    });
+    document.querySelectorAll('.tr-translating').forEach(el => {
+      const parent = el.parentNode;
+      if (!parent) { el.remove(); return; }
+      const origContainer = el.querySelector(`.${ORIGINAL_CLASS}`);
+      if (origContainer) {
+        const fragment = document.createDocumentFragment();
+        while (origContainer.firstChild) {
+          fragment.appendChild(origContainer.firstChild);
+        }
+        parent.replaceChild(fragment, el);
+      } else {
+        el.remove();
+      }
+    });
   }
 
   let isDark = false;
@@ -1312,7 +1743,7 @@
 
   const GENERIC_RULE = {
     name: "通用规则",
-    selectors: ["p", "h1", "h2", "h3", "h4", "h5", "h6", "article", "main", "section", "blockquote", "li", "td", "th", "figcaption", "details", "summary", "label", "dd", "dt"],
+    selectors: [],
     excludeMatches: [],
     autoTranslate: true,
     translateUI: false,
@@ -1320,19 +1751,18 @@
 
   const LS_PREFIX = "snap-translate:";
 
-  function detectContentLang() {
-    const body = document.body;
-    if (!body) return '';
-    const sample = body.innerText.substring(0, 800);
+  function detectContentLang(rule) {
+    const sample = getContentSample(rule);
+    if (!sample) return '';
     const totalNonSpace = (sample.match(/[^\s]/g) || []).length;
-    if (totalNonSpace < 20) return '';
+    if (totalNonSpace < 30) return '';
     const zhChars = (sample.match(/[\u4e00-\u9fff]/g) || []).length;
     const jaChars = (sample.match(/[\u3040-\u309f\u30a0-\u30ff]/g) || []).length;
     const koChars = (sample.match(/[\uac00-\ud7af]/g) || []).length;
     const ruChars = (sample.match(/[\u0400-\u04ff]/g) || []).length;
     const arChars = (sample.match(/[\u0600-\u06ff]/g) || []).length;
     const enChars = (sample.match(/[a-zA-Z]/g) || []).length;
-    if (zhChars / totalNonSpace > 0.15) return 'zh';
+    if (zhChars / totalNonSpace > 0.4) return 'zh';
     if (jaChars / totalNonSpace > 0.1) return 'ja';
     if (koChars / totalNonSpace > 0.1) return 'ko';
     if (ruChars / totalNonSpace > 0.15) return 'ru';
@@ -1341,34 +1771,63 @@
     return '';
   }
 
-  function detectPageLang() {
-    const htmlLang = document.documentElement?.getAttribute('lang') || '';
-    if (htmlLang) return htmlLang.split('-')[0].toLowerCase();
+  function getContentSample(rule) {
+    let text = '';
 
-    const metaLang = document.querySelector('meta[http-equiv="content-language"]');
-    if (metaLang) {
-      const c = metaLang.getAttribute('content') || '';
-      if (c) return c.split('-')[0].toLowerCase();
+    if (rule) {
+      if (rule.containerSelector) {
+        const containers = document.querySelectorAll(rule.containerSelector);
+        for (const c of containers) {
+          text += c.innerText + ' ';
+          if (text.length > 3000) break;
+        }
+        if (text.trim()) return text.substring(0, 3000);
+      }
+      if (rule.selectors?.length) {
+        for (const sel of rule.selectors) {
+          const cleanSel = sel.split(' >>> ')[0].split(' -> ')[0].trim();
+          try {
+            const els = document.querySelectorAll(cleanSel);
+            for (const el of els) {
+              text += el.innerText + ' ';
+              if (text.length > 3000) break;
+            }
+          } catch { }
+          if (text.length > 3000) break;
+        }
+        if (text.trim()) return text.substring(0, 3000);
+      }
     }
 
-    return detectContentLang();
+    const mainEl = document.querySelector('main, [role="main"], article');
+    if (mainEl) {
+      text = mainEl.innerText;
+      if (text.trim()) return text.substring(0, 3000);
+    }
+
+    const articles = document.querySelectorAll('article, [role="article"]');
+    for (const a of articles) {
+      text += a.innerText + ' ';
+      if (text.length > 3000) break;
+    }
+    if (text.trim()) return text.substring(0, 3000);
+
+    const body = document.body;
+    if (!body) return '';
+    const clone = body.cloneNode(true);
+    const uiTags = clone.querySelectorAll('nav, header, footer, aside, [role="navigation"], [role="banner"], [role="contentinfo"], [role="complementary"]');
+    uiTags.forEach(el => el.remove());
+    text = clone.innerText || '';
+    return text.substring(0, 3000);
   }
 
-  function shouldSkipTranslation(targetLang) {
-    const declaredLang = detectPageLang();
-    const contentLang = detectContentLang();
+  function shouldSkipTranslation(targetLang, rule) {
+    const contentLang = detectContentLang(rule);
     const t = (targetLang || '').split('-')[0].toLowerCase();
 
-    if (!declaredLang && !contentLang) return false;
+    if (!contentLang) return false;
 
-    const declaredMatch = declaredLang && (declaredLang === t || (t === 'zh' && declaredLang === 'zh'));
-    const contentMatch = contentLang && (contentLang === t || (t === 'zh' && contentLang === 'zh'));
-
-    if (declaredMatch && contentMatch) return true;
-    if (declaredMatch && !contentMatch && contentLang) return false;
-    if (contentMatch) return true;
-
-    return false;
+    return contentLang === t;
   }
   function lsGet(key) {
     try {
@@ -1384,10 +1843,10 @@
   }
 
   let S = {
-    selTL: "en", inputSL: "auto", inputTL: "en", pgTL: "en",
+    selTL: "zh-CN", inputSL: "auto", inputTL: "zh-CN", pgTL: "zh-CN",
     enSel: true, enInput: true, enPage: true, enFloat: true, autoTranslate: true,
     ignLangs: [], selEngine: "google", inputEngine: "google", pgEngine: "google",
-    blacklist: [], autoBlacklist: [], rulesUrl: ""
+    blacklist: [], autoBlacklist: [], rulesUrl: "", allowRemoteTTS: true
   };
   let ready = false;
   let isBlacklisted = false;
@@ -1451,6 +1910,8 @@
     } catch { }
 
     if (siteRule) {
+      pageLangDisabled = shouldSkipTranslation(targetLang, siteRule);
+      if (pageLangDisabled) return;
       if (S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
         pgTranslating = true;
         await applyPageRule(siteRule, "auto", targetLang, S.pgEngine || "google");
@@ -1458,7 +1919,7 @@
         updateToolbarIcon();
       }
     } else {
-      pageLangDisabled = shouldSkipTranslation(targetLang);
+      pageLangDisabled = shouldSkipTranslation(targetLang, null);
       if (pageLangDisabled) return;
       if (S.autoTranslate && !isAutoBlacklisted) {
         siteRule = GENERIC_RULE;
@@ -1507,16 +1968,7 @@
 
   function revertPageTranslation() {
     stopObserver();
-    document.querySelectorAll("[data-snap-translated='page']").forEach((el) => {
-      if (el.hasAttribute('data-snap-original')) {
-        const original = el.getAttribute('data-snap-original');
-        const textNode = document.createTextNode(original);
-        el.parentNode.replaceChild(textNode, el);
-      }
-    });
-    document.querySelectorAll("[data-snap-translated='fixed']").forEach((el) => {
-      el.removeAttribute("data-snap-translated");
-    });
+    revertPageTranslation$1();
     pgTranslating = false;
     if (float) float.classList.remove("tr-translated");
     updateToolbarIcon();
@@ -1670,7 +2122,8 @@
       showToast("此网站已在网页翻译黑名单中");
       return;
     }
-    if (!siteRule && pageLangDisabled) {
+    const targetLang = S.pgTL || S.selTL;
+    if (shouldSkipTranslation(targetLang, siteRule)) {
       showToast("此页面语言与目标语言相同，无需翻译");
       return;
     }
@@ -1705,7 +2158,7 @@
     setLastY(e.clientY);
     setTimeout(() => {
       if (isOwn(e.target)) return;
-      const sel = getSelection();
+      const sel = getSelection(e);
       if (!sel) { clearAll(); return; }
       if (sel.isInput && !S.enInput) return;
       if (!sel.isInput && !S.enSel) return;
@@ -1786,8 +2239,9 @@
     } catch { }
 
     if (siteRule) {
-      if (S.enPage && S.enFloat) createFloat();
-      if (S.enPage && S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
+      pageLangDisabled = shouldSkipTranslation(targetLang, siteRule);
+      if (S.enPage && !pageLangDisabled && S.enFloat) createFloat();
+      if (S.enPage && !pageLangDisabled && S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
         pgTranslating = true;
         const st = await showTransStatus(`匹配规则: ${siteRule.name}，自动翻译`);
         await applyPageRule(siteRule, "auto", targetLang, S.pgEngine || "google");
@@ -1796,7 +2250,7 @@
         updateToolbarIcon();
       }
     } else {
-      pageLangDisabled = shouldSkipTranslation(targetLang);
+      pageLangDisabled = shouldSkipTranslation(targetLang, null);
       if (S.enPage && !pageLangDisabled && S.enFloat) createFloat();
       if (S.enPage && !pageLangDisabled && S.autoTranslate && !isAutoBlacklisted) {
         siteRule = GENERIC_RULE;
@@ -1851,7 +2305,7 @@
       if (changes.settings) {
         S = { ...S, ...changes.settings.newValue };
         const newTargetLang = S.pgTL || S.selTL;
-        pageLangDisabled = shouldSkipTranslation(newTargetLang);
+        pageLangDisabled = shouldSkipTranslation(newTargetLang, siteRule);
         isBlacklisted = isBlacklisted$1(location.hostname, S.blacklist || []);
         isAutoBlacklisted = isBlacklisted$1(location.hostname, S.autoBlacklist || []);
         if (S.enFloat && !isBlacklisted && (siteRule || !pageLangDisabled) && !sessionDisabled) createFloat();

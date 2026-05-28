@@ -66,17 +66,30 @@ export function getBrowserLang() {
 }
 
 export function detectTextLang(text) {
-  if (/[\u4e00-\u9fff]/.test(text)) {
-    if (!/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "zh-CN";
-  }
-  if (/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "ja";
-  if (/[\uac00-\ud7af]/.test(text)) return "ko";
-  if (/[\u0400-\u04ff]/.test(text)) return "ru";
-  if (/[\u0600-\u06ff]/.test(text)) return "ar";
-  if (/[\u0e00-\u0e7f]/.test(text)) return "th";
-  if (/[\u0100-\u01ef\u0300-\u033f]/.test(text)) return "vi";
-  if (/[\u0900-\u097f]/.test(text)) return "hi";
-  if (/[a-zA-Z]/.test(text)) return "en";
+  if (!text) return null;
+  const stripped = text.replace(/[\s\d!"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~\u00A0-\u00BF\u2000-\u206F\u3000-\u303F]/g, '');
+  const total = stripped.length;
+  if (total < 2) return null;
+
+  const zh = (stripped.match(/[\u4e00-\u9fff]/g) || []).length;
+  const ja = (stripped.match(/[\u3040-\u309f\u30a0-\u30ff]/g) || []).length;
+  const ko = (stripped.match(/[\uac00-\ud7af]/g) || []).length;
+  const ru = (stripped.match(/[\u0400-\u04ff]/g) || []).length;
+  const ar = (stripped.match(/[\u0600-\u06ff]/g) || []).length;
+  const th = (stripped.match(/[\u0e00-\u0e7f]/g) || []).length;
+  const vi = (stripped.match(/[\u0100-\u01ef\u0300-\u033f]/g) || []).length;
+  const hi = (stripped.match(/[\u0900-\u097f]/g) || []).length;
+  const en = (stripped.match(/[a-zA-Z]/g) || []).length;
+
+  if (ko / total > 0.1) return "ko";
+  if (ja / total > 0.1) return "ja";
+  if (zh * 2.5 / total > 0.5) return "zh-CN";
+  if (ru > total * 0.4) return "ru";
+  if (ar > total * 0.4) return "ar";
+  if (th > total * 0.4) return "th";
+  if (vi > total * 0.4) return "vi";
+  if (hi > total * 0.4) return "hi";
+  if (en > total * 0.3) return "en";
   return null;
 }
 

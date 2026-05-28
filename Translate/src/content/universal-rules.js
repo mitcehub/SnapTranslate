@@ -1,3 +1,5 @@
+import { detectTextLang } from '../shared/constants.js';
+
 const UNIVERSAL_EXCLUDE_SELECTORS = [
   "[contenteditable=\"true\"]",
   ".notranslate",
@@ -16,7 +18,6 @@ const UNIVERSAL_EXCLUDE_SELECTORS = [
   ".enlighter-code",
   ".rc-CodeBlock",
   "[role=code]",
-  "[role=group]",
   "div[class^=codeBlockContent]",
   "div[class^=codeBlockLines]",
   "table.highlight",
@@ -68,11 +69,41 @@ const STAY_ORIGINAL_TAGS = new Set([
   "MUNDEROVER", "MTABLE", "MTR", "MTD", "MLABELEDTR",
   "MPADDED", "MPHANTOM", "MSPACE",
 ]);
+
+const SKIP_TAGS = new Set([
+  "SCRIPT", "STYLE", "NOSCRIPT", "SVG", "MATH", "IFRAME",
+  "OBJECT", "EMBED", "TEMPLATE", "TEXTAREA", "SELECT",
+  "BUTTON", "DIALOG", "FORM", "FIELDSET", "OUTPUT",
+  "CANVAS", "MAP", "AREA", "AUDIO", "VIDEO",
+  "TRACK", "SOURCE", "PICTURE", "SLOT", "PORTAL",
+]);
+
+const INLINE_DISPLAYS = new Set([
+  "inline", "inline-block", "inline-flex", "inline-grid",
+  "inline-table", "ruby", "inline-box",
+]);
+
+const BLOCK_DISPLAYS = new Set([
+  "block", "flex", "grid", "table", "table-row",
+  "table-cell", "table-caption", "list-item",
+  "flow-root", "contents",
+]);
+
+const BLOCK_TAGS = new Set([
+  "DIV", "P", "H1", "H2", "H3", "H4", "H5", "H6",
+  "UL", "OL", "LI", "TABLE", "TR", "TD", "TH",
+  "SECTION", "ARTICLE", "ASIDE", "MAIN", "HEADER",
+  "FOOTER", "NAV", "FIGURE", "FIGCAPTION", "DETAILS",
+  "SUMMARY", "BLOCKQUOTE", "PRE", "HR", "ADDRESS",
+  "FIELDSET", "DL", "DT", "DD",
+]);
+
 const SEMANTIC_MARKERS = {
   "header": { "default-translate": "no" },
   "nav": { "side": "1", "default-translate": "no" },
   "footer:last-of-type": { "default-translate": "no" },
 };
+
 export function applySemanticMarkers() {
   for (const [sel, attrs] of Object.entries(SEMANTIC_MARKERS)) {
     try {
@@ -85,6 +116,7 @@ export function applySemanticMarkers() {
     } catch { }
   }
 }
+
 export function buildExcludeSet(excludeSelectors) {
   const excluded = new Set();
   for (const sel of UNIVERSAL_EXCLUDE_SELECTORS) {
@@ -98,6 +130,27 @@ export function buildExcludeSet(excludeSelectors) {
   }
   return excluded;
 }
+
+export function isBlockElement(el) {
+  if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
+  if (BLOCK_TAGS.has(el.tagName)) return true;
+  try {
+    const display = window.getComputedStyle(el).display;
+    if (BLOCK_DISPLAYS.has(display)) return true;
+    if (INLINE_DISPLAYS.has(display)) return false;
+  } catch { }
+  return false;
+}
+
+export function isInlineElement(el) {
+  if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
+  try {
+    const display = window.getComputedStyle(el).display;
+    return INLINE_DISPLAYS.has(display);
+  } catch { }
+  return false;
+}
+
 export function shouldSkipText(text, tl) {
   if (!text) return true;
   const trimmed = text.trim();
@@ -108,13 +161,16 @@ export function shouldSkipText(text, tl) {
   const words = trimmed.split(/\s+/).filter(w => /\w/.test(w));
   if (words.length < 1) return true;
   if (tl) {
-    const tlLower = tl.toLowerCase();
-    if (tlLower.startsWith("zh") && /[\u4e00-\u9fff]/.test(trimmed)) return true;
-    if (tlLower === "ja" && /[\u3040-\u309f\u30a0-\u30ff]/.test(trimmed)) return true;
-    if (tlLower === "ko" && /[\uac00-\ud7af]/.test(trimmed)) return true;
+    const detected = detectTextLang(trimmed);
+    if (detected) {
+      const tlPrefix = tl.toLowerCase().split('-')[0];
+      const detectedPrefix = detected.toLowerCase().split('-')[0];
+      if (tlPrefix === detectedPrefix) return true;
+    }
   }
   return false;
 }
+
 export function shouldSkipElement(el, excluded) {
   while (el) {
     if (excluded.has(el)) return true;
@@ -122,15 +178,18 @@ export function shouldSkipElement(el, excluded) {
   }
   return false;
 }
+
 export function shouldSkipByVisibility(el) {
   if (!el) return false;
   try {
     const style = window.getComputedStyle(el);
     if (style.display === 'none') return true;
     if (style.visibility === 'hidden') return true;
-    if (parseFloat(style.opacity) === 0) return true;
+    const opacityVal = parseFloat(style.opacity);
+    if (!isNaN(opacityVal) && opacityVal === 0) return true;
     if (el.offsetWidth === 0 && el.offsetHeight === 0) return true;
   } catch { }
   return false;
 }
-export { UNIVERSAL_EXCLUDE_SELECTORS, STAY_ORIGINAL_SELECTORS, STAY_ORIGINAL_TAGS, SEMANTIC_MARKERS };
+
+export { UNIVERSAL_EXCLUDE_SELECTORS, STAY_ORIGINAL_SELECTORS, STAY_ORIGINAL_TAGS, SKIP_TAGS, BLOCK_TAGS, SEMANTIC_MARKERS };
