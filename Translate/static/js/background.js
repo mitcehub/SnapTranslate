@@ -6309,6 +6309,7 @@
   			"#streaming-response",
   			"[noun='recommendation']",
   			"#subgrid-container h1, #subgrid-container h2",
+  			".i18n-list-item-post-title",
   			".i18n-subreddit-description",
   			"#response-container_streaming",
   			"search-telemetry-tracker > a.text-neutral-content-strong",
@@ -6364,6 +6365,7 @@
   			"[role=main] .md-container",
   			".room-message-text",
   			".crosspost-title",
+  			".i18n-list-item-post-title",
   			"div.md[id^=t3_]",
   			".pt-md"
   		],
