@@ -2,7 +2,7 @@ import AdmZip from 'adm-zip';
 import { readFileSync } from 'fs';
 
 const zip = new AdmZip();
-zip.addLocalFolder('Translate', '', (name) => !name.startsWith('src'));
+zip.addLocalFolder('SnapTranslate', '', (name) => !name.startsWith('src'));
 zip.getEntries().filter(e => e.name.endsWith('.map')).forEach(e => zip.deleteFile(e));
 
 const mf = JSON.parse(zip.getEntry('manifest.json').getData().toString('utf-8'));

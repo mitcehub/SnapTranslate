@@ -1,7 +1,7 @@
 import resolve from '@rollup/plugin-node-resolve';
 import json from '@rollup/plugin-json';
 
-const outputDir = 'Translate/static/js';
+const outputDir = 'SnapTranslate/static/js';
 
 function onwarn(warning, warn) {
   if (warning.code === 'CIRCULAR_DEPENDENCY') {
@@ -12,7 +12,7 @@ function onwarn(warning, warn) {
 
 const inputs = ['content', 'background', 'options'];
 export default inputs.map((name) => ({
-  input: `Translate/src/${name}/index.js`,
+  input: `src/${name}/index.js`,
   output: { file: `${outputDir}/${name}.js`, format: 'iife', sourcemap: false },
   plugins: [resolve(), json()],
   onwarn,
