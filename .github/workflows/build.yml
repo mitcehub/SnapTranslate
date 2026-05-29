@@ -30,8 +30,8 @@ jobs:
 
       - name: Create Chrome ZIP
         run: |
-          cd Translate
-          zip -r ../snap-translate-chrome.zip . -x "src/**" ".DS_Store"
+          cd SnapTranslate
+          zip -r ../snap-translate-chrome.zip . -x ".DS_Store" "*.map"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
