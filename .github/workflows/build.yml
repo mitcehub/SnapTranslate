@@ -33,6 +33,11 @@ jobs:
           cd SnapTranslate
           zip -r ../snap-translate-chrome.zip . -x ".DS_Store" "*.map"
 
+      - name: Download Firefox XPI
+        run: |
+          curl -L -o snap-translate-firefox.xpi \
+            "https://addons.mozilla.org/firefox/downloads/file/4826630/snaptranslate-0.0.3.xpi"
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -53,7 +58,8 @@ jobs:
 
             ### Firefox 版本
 
-            Firefox 版本正在审核中，审核完成后将在此 Release 页面提供下载。
+            可直接下载 `snap-translate-firefox.xpi` 双击安装
           draft: false
           files: |
             snap-translate-chrome.zip
+            snap-translate-firefox.xpi

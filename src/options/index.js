@@ -2,6 +2,8 @@ import { initSettingsUI } from './settings-ui.js';
 
 initSettingsUI();
 
+document.getElementById('extVersion').textContent = 'v' + chrome.runtime.getManifest().version;
+
 document.getElementById("checkUpdateBtn")?.addEventListener("click", () => {
   const btn = document.getElementById("checkUpdateBtn");
   const status = document.getElementById("updateStatus");
