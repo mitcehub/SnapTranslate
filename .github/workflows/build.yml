@@ -39,37 +39,28 @@ jobs:
             "https://addons.mozilla.org/firefox/downloads/file/4826630/snaptranslate-0.0.3.xpi"
 
       - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          name: SnapTranslate ${{ github.ref_name }}
-          body: |
-            ## SnapTranslate ${{ github.ref_name }}
+        run: |
+          VERSION=$(node -p "require('./SnapTranslate/manifest.json').version")
+          gh release create "v$VERSION" \
+            snap-translate-chrome.zip \
+            snap-translate-firefox.xpi \
+            --title "SnapTranslate v$VERSION" \
+            --notes "## SnapTranslate v$VERSION
 
-            ### Chrome / Edge 浏览器安装说明
+          ### Chrome / Edge 浏览器安装说明
 
-            1. 下载 `snap-translate-chrome.zip` 并解压到一个文件夹中
-            2. 在 Chrome / Edge 地址栏输入 `chrome://extensions/` 回车（Edge 用 `edge://extensions/`）
-            3. 打开右上角的 **开发者模式**
-            4. 点击 **加载已解压的扩展程序**
-            5. 选择刚才解压的文件夹，点击确定
-            6. 扩展已安装成功！工具栏会出现翻译图标
+          1. 下载 \`snap-translate-chrome.zip\` 并解压到一个文件夹中
+          2. 在 Chrome / Edge 地址栏输入 \`chrome://extensions/\` 回车（Edge 用 \`edge://extensions/\`）
+          3. 打开右上角的 **开发者模式**
+          4. 点击 **加载已解压的扩展程序**
+          5. 选择刚才解压的文件夹，点击确定
+          6. 扩展已安装成功！工具栏会出现翻译图标
 
-            > **注意**：每次更新版本需要先移除旧版本，再重新加载新版本
+          > **注意**：每次更新版本需要先移除旧版本，再重新加载新版本
 
-            ### Firefox 版本
+          ### Firefox 版本
 
-            可直接下载 `snap-translate-firefox.xpi` 双击安装
-          draft: false
-          files: |
-            snap-translate-chrome.zip
-            snap-translate-firefox.xpi
-
-      - name: Upload Artifacts
-        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: snap-translate-build
-          path: |
-            snap-translate-chrome.zip
-            snap-translate-firefox.xpi
+          可直接下载 \`snap-translate-firefox.xpi\` 双击安装" || \
+          gh release upload "v$VERSION" snap-translate-chrome.zip snap-translate-firefox.xpi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
