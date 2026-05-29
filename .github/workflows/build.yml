@@ -45,7 +45,7 @@ jobs:
             --title "SnapTranslate v$VERSION" \
             --notes "## SnapTranslate v$VERSION
 
-          ### Chrome / Edge 浏览器安装说明
+          ### Chrome / Edge
 
           1. 下载 \`snap-translate-chrome.zip\` 并解压到一个文件夹中
           2. 在 Chrome / Edge 地址栏输入 \`chrome://extensions/\` 回车（Edge 用 \`edge://extensions/\`）
@@ -56,9 +56,15 @@ jobs:
 
           > **注意**：每次更新版本需要先移除旧版本，再重新加载新版本
 
-          ### Firefox 版本
+          ### Firefox
 
-          可直接下载 \`snap-translate-firefox.xpi\` 双击安装" || \
+          1. 下载 \`snap-translate-firefox.xpi\`
+          2. 直接拖入浏览器窗口安装，或在 Firefox 地址栏输入 \`about:addons\` → 齿轮图标 → **从文件安装附加组件**
+
+          ### 翻译引擎说明
+
+          - **Google 翻译**：速度快，翻译质量高，**需要能够访问 Google 服务**
+          - **Microsoft 翻译**：国内用户可直接使用，无需特殊网络环境，翻译速度相对较慢" || \
           gh release upload "v$VERSION" snap-translate-chrome.zip snap-translate-firefox.xpi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
