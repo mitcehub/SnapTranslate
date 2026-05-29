@@ -33,10 +33,8 @@ jobs:
           cd SnapTranslate
           zip -r ../snap-translate-chrome.zip . -x ".DS_Store" "*.map"
 
-      - name: Download Firefox XPI
-        run: |
-          curl -L -o snap-translate-firefox.xpi \
-            "https://addons.mozilla.org/firefox/downloads/file/4826630/snaptranslate-0.0.3.xpi"
+      - name: Copy Firefox XPI
+        run: cp packages/snaptranslate-*.xpi snap-translate-firefox.xpi
 
       - name: Create Release
         run: |
