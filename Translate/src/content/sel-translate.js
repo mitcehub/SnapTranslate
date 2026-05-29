@@ -1,7 +1,7 @@
 import { escHtml, sendMessage } from '../shared/constants.js';
 import { svgIcon } from './ui/icons.js';
 import { buildDropdown, buildEngineDropdown, position, positionPanel, closeDropdown, showToast, attachSpeakHandlers, attachCopyHandler } from './ui/components.js';
-import { isEditable, doReplace } from './input-translate.js';
+import { isEditable, doReplace, getDeepActiveElement } from './input-translate.js';
 
 let tBar = null;
 let panel = null;
@@ -12,6 +12,7 @@ let actInput = null;
 let selText = "";
 let lastX = 0;
 let lastY = 0;
+let savedRange = null;
 
 export function getTBar() { return tBar; }
 export function setTBar(v) { tBar = v; }
@@ -20,6 +21,7 @@ export function setPanel(v) { panel = v; }
 export function getBusy() { return busy; }
 export function getActInput() { return actInput; }
 export function getSelText() { return selText; }
+export function getSavedRange() { return savedRange; }
 export function getLastX() { return lastX; }
 export function getLastY() { return lastY; }
 export function setLastX(v) { lastX = v; }
@@ -32,10 +34,36 @@ export function clearAll() {
   if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null; }
   if (panelTimer) { clearTimeout(panelTimer); panelTimer = null; }
   busy = false;
+  savedRange = null;
 }
 
-export function getSelection() {
-  const ae = document.activeElement;
+export function getSelection(event) {
+  let shadowInput = null;
+  if (event && event.composedPath) {
+    const path = event.composedPath();
+    for (const target of path) {
+      if (target.nodeType === Node.ELEMENT_NODE) {
+        if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") {
+          if (isEditable(target)) {
+            shadowInput = target;
+            break;
+          }
+        }
+        if (target.isContentEditable) break;
+      }
+    }
+  }
+
+  if (shadowInput) {
+    const st = shadowInput.selectionStart, en = shadowInput.selectionEnd;
+    if (st !== en) {
+      actInput = shadowInput;
+      selText = shadowInput.value.substring(st, en);
+      return { text: selText, isInput: true, el: shadowInput };
+    }
+  }
+
+  const ae = getDeepActiveElement(document, true);
   if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) {
     const st = ae.selectionStart, en = ae.selectionEnd;
     if (st !== en) {
@@ -53,9 +81,13 @@ export function getSelection() {
   actInput = null;
   selText = txt;
 
+  if (s.rangeCount > 0) {
+    savedRange = s.getRangeAt(0).cloneRange();
+  }
+
   const an = s.anchorNode;
   if (an) {
-    let p = an.parentElement;
+    let p = an.nodeType === Node.ELEMENT_NODE ? an : an.parentElement;
     while (p) {
       if (p.isContentEditable) { actInput = p; break; }
       p = p.parentElement;
@@ -209,7 +241,7 @@ async function doTranslate(txt, sl, tl, engine) {
       attachSpeakHandlers(body);
       attachCopyHandler(body.querySelector(".tr-copy-btn"), r.result);
       const rpBtn = body.querySelector(".tr-replace-btn");
-      if (rpBtn) rpBtn.addEventListener("click", () => { doReplace(r.result, actInput, selText, showToast); clearAll(); });
+      if (rpBtn) rpBtn.addEventListener("click", () => { doReplace(r.result, actInput, selText, showToast, savedRange); clearAll(); });
     } else if (!r.success && panel && loadingEl) {
       loadingEl.outerHTML = `<div class="tr-result" style="color:#ef4444;">Translation failed: ${escHtml(r.error || "unknown error")}</div>`;
       requestAnimationFrame(() => positionPanel(panel, tBar));

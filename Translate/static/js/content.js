@@ -1082,12 +1082,16 @@
 
   function injectBaseStyles() {
     const styleId = 'snap-base-styles';
-    if (document.getElementById(styleId)) return;
+    const existing = document.getElementById(styleId);
     const css = `
 .${WRAPPER_CLASS} { display: inline; }
 .${INNER_CLASS} { display: inline; }
-.${ORIGINAL_CLASS} { display: none !important; }
+.${ORIGINAL_CLASS} { display: none !important; visibility: hidden !important; position: absolute !important; width: 0 !important; height: 0 !important; overflow: hidden !important; clip: rect(0,0,0,0) !important; }
   `.trim();
+    if (existing) {
+      existing.textContent = css;
+      return;
+    }
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = css;
@@ -1317,7 +1321,7 @@
 
     const originalContainer = document.createElement('span');
     originalContainer.className = ORIGINAL_CLASS;
-    originalContainer.style.display = 'none';
+    originalContainer.style.setProperty('display', 'none', 'important');
     for (const node of nodes) {
       if (node.parentNode) {
         node.parentNode.removeChild(node);
@@ -1389,7 +1393,7 @@
         const refNode = lastNode.nextSibling;
         const originalContainer = document.createElement('span');
         originalContainer.className = ORIGINAL_CLASS;
-        originalContainer.style.display = 'none';
+        originalContainer.style.setProperty('display', 'none', 'important');
         for (const node of para.nodes) {
           if (node.parentNode) node.parentNode.removeChild(node);
           originalContainer.appendChild(node);

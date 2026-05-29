@@ -170,14 +170,14 @@ export function matchRule(rules, url) {
       }
       if (rule.matches?.length) {
         if (matchUrlAgainstPatterns(url, rule.matches)) return rule;
-        continue;
       }
-      if (!rule.urlPattern) continue;
-      const patterns = rule.urlPattern.split("|");
-      for (const p of patterns) {
-        const pattern = p.trim();
-        if (!pattern) continue;
-        if (matchHostname(hostname, pattern)) return rule;
+      if (rule.urlPattern) {
+        const patterns = rule.urlPattern.split("|");
+        for (const p of patterns) {
+          const pattern = p.trim();
+          if (!pattern) continue;
+          if (matchHostname(hostname, pattern)) return rule;
+        }
       }
     }
   } catch { }

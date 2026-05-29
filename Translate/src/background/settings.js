@@ -14,13 +14,13 @@ export { ENGINES };
 const DEF = {
   selTL: getBrowserLang(),
   inputSL: "auto",
-  inputTL: "en",
+  inputTL: getBrowserLang(),
   pgTL: getBrowserLang(),
   enSel: true,
   enInput: true,
   enPage: true,
   enFloat: true,
-  autoTranslate: false,
+  autoTranslate: true,
   ignLangs: [],
   selEngine: "google",
   inputEngine: "google",
@@ -28,7 +28,7 @@ const DEF = {
   blacklist: [],
   autoBlacklist: [],
   rulesUrl: "",
-  allowRemoteTTS: false,
+  allowRemoteTTS: true,
 };
 
 export async function getSettings() {
