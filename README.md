@@ -46,9 +46,7 @@
 
 ### Firefox
 
-- [Firefox Add-ons 商店](https://addons.mozilla.org/zh-CN/firefox/addon/snaptranslate/)（推荐）
-- 或前往 [Releases](https://github.com/mitcehub/SnapTranslate/releases) 下载最新版 `snap-translate-firefox.xpi`，拖入浏览器窗口安装
-- 或在 Firefox 地址栏输入 `about:addons` → 齿轮图标 → **从文件安装附加组件**
+前往 [Firefox Add-ons 商店](https://addons.mozilla.org/zh-CN/firefox/addon/snaptranslate/) 安装
 
 ## 版本
 

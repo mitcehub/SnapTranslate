@@ -33,15 +33,11 @@ jobs:
           cd SnapTranslate
           zip -r ../snap-translate-chrome.zip . -x ".DS_Store" "*.map"
 
-      - name: Copy Firefox XPI
-        run: cp packages/snaptranslate-*.xpi snap-translate-firefox.xpi
-
       - name: Create Release
         run: |
           VERSION=$(node -p "require('./SnapTranslate/manifest.json').version")
           gh release create "v$VERSION" \
             snap-translate-chrome.zip \
-            snap-translate-firefox.xpi \
             --title "SnapTranslate v$VERSION" \
             --notes "## SnapTranslate v$VERSION
 
@@ -58,14 +54,12 @@ jobs:
 
           ### Firefox
 
-          - [Firefox Add-ons 商店](https://addons.mozilla.org/zh-CN/firefox/addon/snaptranslate/)（推荐）
-          - 或下载 \`snap-translate-firefox.xpi\`，直接拖入浏览器窗口安装
-          - 或在 Firefox 地址栏输入 \`about:addons\` → 齿轮图标 → **从文件安装附加组件**
+          前往 [Firefox Add-ons 商店](https://addons.mozilla.org/zh-CN/firefox/addon/snaptranslate/) 安装
 
           ### 翻译引擎说明
 
           - **Google 翻译**：速度快，翻译质量高，**需要能够访问 Google 服务**
           - **Microsoft 翻译**：国内用户可直接使用，无需特殊网络环境，翻译速度相对较慢" || \
-          gh release upload "v$VERSION" snap-translate-chrome.zip snap-translate-firefox.xpi
+          gh release upload "v$VERSION" snap-translate-chrome.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

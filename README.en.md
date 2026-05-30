@@ -46,9 +46,7 @@ A lightweight browser translation extension for Chrome / Edge / Firefox.
 
 ### Firefox
 
-- [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/snaptranslate/) (Recommended)
-- Or download the latest `snap-translate-firefox.xpi` from [Releases](https://github.com/mitcehub/SnapTranslate/releases), drag and drop into the browser
-- Or go to `about:addons` → gear icon → **Install Add-on From File**
+Install from [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/snaptranslate/)
 
 ## Version
 
