@@ -1,5 +1,7 @@
 # SnapTranslate
 
+[English](./README.en.md)
+
 轻量级浏览器划词翻译扩展。
 
 ## 功能

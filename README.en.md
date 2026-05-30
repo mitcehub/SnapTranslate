@@ -1,5 +1,7 @@
 # SnapTranslate
 
+[中文](./README.md)
+
 A lightweight browser translation extension.
 
 ## Features

@@ -56,9 +56,11 @@ jobs:
 
           > **注意**：每次更新版本需要先移除旧版本，再重新加载新版本
 
-          ### Firefox 版本
+          ### Firefox
 
-          可直接下载 \`snap-translate-firefox.xpi\` 双击安装" || \
+          - [Firefox Add-ons 商店](https://addons.mozilla.org/zh-CN/firefox/addon/snaptranslate/)（推荐）
+          - 或下载 \`snap-translate-firefox.xpi\`，直接拖入浏览器窗口安装
+          - 或在 Firefox 地址栏输入 \`about:addons\` → 齿轮图标 → **从文件安装附加组件**" || \
           gh release upload "v$VERSION" snap-translate-chrome.zip snap-translate-firefox.xpi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
