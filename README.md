@@ -1,5 +1,7 @@
 # SnapTranslate
 
+[English](./README.en.md)
+
 轻量级浏览器划词翻译扩展，支持 Chrome / Edge / Firefox。
 
 ## 功能
@@ -40,12 +42,13 @@
 1. 克隆仓库：`git clone https://github.com/mitcehub/SnapTranslate.git`
 2. 安装依赖：`cd SnapTranslate && npm install`
 3. 构建：`npm run build`
-4. Chrome → `chrome://extensions` → 开发者模式 → 加载已解压的扩展程序 → 选择 `Translate` 目录
+4. Chrome → `chrome://extensions` → 开发者模式 → 加载已解压的扩展程序 → 选择 `SnapTranslate` 目录
 
 ### Firefox
 
-1. 前往 [Releases](https://github.com/mitcehub/SnapTranslate/releases) 下载最新版 `snap-translate-firefox.xpi`
-2. 直接拖入浏览器窗口安装，或在 Firefox 地址栏输入 `about:addons` → 齿轮图标 → **从文件安装附加组件**
+- [Firefox Add-ons 商店](https://addons.mozilla.org/zh-CN/firefox/addon/snaptranslate/)（推荐）
+- 或前往 [Releases](https://github.com/mitcehub/SnapTranslate/releases) 下载最新版 `snap-translate-firefox.xpi`，拖入浏览器窗口安装
+- 或在 Firefox 地址栏输入 `about:addons` → 齿轮图标 → **从文件安装附加组件**
 
 ## 版本
 

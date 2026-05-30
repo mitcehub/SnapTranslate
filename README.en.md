@@ -1,5 +1,7 @@
 # SnapTranslate
 
+[中文](./README.md)
+
 A lightweight browser translation extension for Chrome / Edge / Firefox.
 
 ## Features
@@ -40,12 +42,13 @@ A lightweight browser translation extension for Chrome / Edge / Firefox.
 1. Clone: `git clone https://github.com/mitcehub/SnapTranslate.git`
 2. Install: `cd SnapTranslate && npm install`
 3. Build: `npm run build`
-4. Chrome → `chrome://extensions` → Developer mode → Load unpacked → select the `Translate` directory
+4. Chrome → `chrome://extensions` → Developer mode → Load unpacked → select the `SnapTranslate` directory
 
 ### Firefox
 
-1. Download the latest `snap-translate-firefox.xpi` from [Releases](https://github.com/mitcehub/SnapTranslate/releases)
-2. Drag and drop the `.xpi` file into the browser window, or go to `about:addons` → gear icon → **Install Add-on From File**
+- [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/snaptranslate/) (Recommended)
+- Or download the latest `snap-translate-firefox.xpi` from [Releases](https://github.com/mitcehub/SnapTranslate/releases), drag and drop into the browser
+- Or go to `about:addons` → gear icon → **Install Add-on From File**
 
 ## Version
 
