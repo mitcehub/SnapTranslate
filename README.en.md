@@ -1,6 +1,6 @@
 # SnapTranslate
 
-[中文](./README.md)
+[中文文档](./README.md)
 
 A lightweight browser translation extension for Chrome / Edge / Firefox.
 
@@ -47,7 +47,3 @@ A lightweight browser translation extension for Chrome / Edge / Firefox.
 ### Firefox
 
 Install from [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/snaptranslate/)
-
-## Version
-
-Current version: **v0.0.3** — [View Release](https://github.com/mitcehub/SnapTranslate/releases/tag/v0.0.3)

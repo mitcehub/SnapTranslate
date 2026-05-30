@@ -1,6 +1,6 @@
 # SnapTranslate
 
-[English](./README.en.md)
+[English Version](./README.en.md)
 
 轻量级浏览器划词翻译扩展，支持 Chrome / Edge / Firefox。
 
@@ -47,7 +47,3 @@
 ### Firefox
 
 前往 [Firefox Add-ons 商店](https://addons.mozilla.org/zh-CN/firefox/addon/snaptranslate/) 安装
-
-## 版本
-
-当前版本：**v0.0.3** — [查看 Release](https://github.com/mitcehub/SnapTranslate/releases/tag/v0.0.3)
