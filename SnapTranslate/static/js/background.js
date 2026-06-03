@@ -301,7 +301,7 @@
     inputEngine: "google",
     pgEngine: "google",
     blacklist: [],
-    autoBlacklist: [],
+    autoWhitelist: [],
     rulesUrl: "",
     allowRemoteTTS: true,
   };
@@ -9129,11 +9129,11 @@
       return true;
     }
 
-    if (req.action === "addAutoBlacklist") {
+    if (req.action === "addWhitelist") {
       getSettings().then(async (s) => {
-        if (!s.autoBlacklist) s.autoBlacklist = [];
-        if (!s.autoBlacklist.includes(req.host)) {
-          s.autoBlacklist.push(req.host);
+        if (!s.autoWhitelist) s.autoWhitelist = [];
+        if (!s.autoWhitelist.includes(req.host)) {
+          s.autoWhitelist.push(req.host);
           await chrome.storage.local.set({ settings: s });
         }
         respond({ success: true });
@@ -9141,10 +9141,10 @@
       return true;
     }
 
-    if (req.action === "removeAutoBlacklist") {
+    if (req.action === "removeWhitelist") {
       getSettings().then(async (s) => {
-        if (!s.autoBlacklist) s.autoBlacklist = [];
-        s.autoBlacklist = s.autoBlacklist.filter((h) => h !== req.host);
+        if (!s.autoWhitelist) s.autoWhitelist = [];
+        s.autoWhitelist = s.autoWhitelist.filter((h) => h !== req.host);
         await chrome.storage.local.set({ settings: s });
         respond({ success: true });
       });

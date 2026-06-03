@@ -26,7 +26,7 @@ const DEF = {
   inputEngine: "google",
   pgEngine: "google",
   blacklist: [],
-  autoBlacklist: [],
+  autoWhitelist: [],
   rulesUrl: "",
   allowRemoteTTS: true,
 };

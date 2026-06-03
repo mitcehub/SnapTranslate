@@ -8,15 +8,15 @@ document.getElementById("checkUpdateBtn")?.addEventListener("click", () => {
   const btn = document.getElementById("checkUpdateBtn");
   const status = document.getElementById("updateStatus");
   btn.disabled = true;
-  status.textContent = "检查中...";
+  status.textContent = "...";
   chrome.runtime.sendMessage({ action: "checkUpdate" }, (r) => {
     btn.disabled = false;
     if (r?.hasUpdate) {
-      status.innerHTML = `发现新版本 <a href="${r.url}" target="_blank">v${r.latest}</a>（当前 v${r.current}）`;
+      status.innerHTML = `v${r.latest}`;
     } else if (r?.error) {
-      status.textContent = "检查失败: " + r.error;
+      status.textContent = "Error";
     } else {
-      status.textContent = "已是最新版本 v" + r?.current;
+      status.textContent = "v" + r?.current;
     }
   });
 });

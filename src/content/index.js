@@ -114,11 +114,11 @@ let S = {
   selTL: "zh-CN", inputSL: "auto", inputTL: "zh-CN", pgTL: "zh-CN",
   enSel: true, enInput: true, enPage: true, enFloat: true, autoTranslate: true,
   ignLangs: [], selEngine: "google", inputEngine: "google", pgEngine: "google",
-  blacklist: [], autoBlacklist: [], rulesUrl: "", allowRemoteTTS: true
+  blacklist: [], autoWhitelist: [], rulesUrl: "", allowRemoteTTS: true
 };
 let ready = false;
 let isBlacklisted = false;
-let isAutoBlacklisted = false;
+let isWhitelisted = false;
 let sessionDisabled = false;
 let pgTranslating = false;
 let pageLangDisabled = false;
@@ -180,7 +180,7 @@ async function handleSpaNavigation() {
   if (siteRule) {
     pageLangDisabled = shouldSkipTranslation(targetLang, siteRule);
     if (pageLangDisabled) return;
-    if (S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
+    if ((S.autoTranslate || isWhitelisted) && siteRule.autoTranslate) {
       pgTranslating = true;
       await applyPageRule(siteRule, "auto", targetLang, S.pgEngine || "google");
       if (pgTranslating && float) float.classList.add("tr-translated");
@@ -189,7 +189,7 @@ async function handleSpaNavigation() {
   } else {
     pageLangDisabled = shouldSkipTranslation(targetLang, null);
     if (pageLangDisabled) return;
-    if (S.autoTranslate && !isAutoBlacklisted) {
+    if (S.autoTranslate || isWhitelisted) {
       siteRule = GENERIC_RULE;
       const st = await showTransStatus("未匹配到规则，使用通用规则");
       await applyPageRule(GENERIC_RULE, "auto", targetLang, S.pgEngine || "google");
@@ -250,7 +250,7 @@ function showDisableMenu() {
   const items = [
     { icon: svgIcon("eyeOff"), label: "下次打开", desc: "关闭本次，下次访问时重新显示", action: () => { removeFloat(); closeFloatMenu(); } },
     { icon: svgIcon("clock"), label: "临时禁用", desc: "本次会话中不再显示", action: () => { try { sessionStorage.setItem(LS_PREFIX + "tr-float-disabled", "1"); } catch { } removeFloat(); closeFloatMenu(); showToast("已临时禁用"); } },
-    { icon: svgIcon("autoOff"), label: "禁用自动翻译", desc: "此网站不自动翻译，可手动点击翻译", action: async () => { const host = location.hostname; if (isAutoBlacklisted) { try { await sendMessage({ action: "removeAutoBlacklist", host }); } catch { } isAutoBlacklisted = false; showToast("已启用自动翻译"); } else { try { await sendMessage({ action: "addAutoBlacklist", host }); } catch { } isAutoBlacklisted = true; if (pgTranslating) revertPageTranslation(); showToast("已禁用自动翻译"); } closeFloatMenu(); } },
+    { icon: svgIcon("autoOff"), label: "切换自动翻译", desc: isWhitelisted ? "从白名单移除，不再自动翻译" : "加入白名单，始终自动翻译", action: async () => { const host = location.hostname; if (isWhitelisted) { try { await sendMessage({ action: "removeWhitelist", host }); } catch { } isWhitelisted = false; showToast("已从白名单移除"); } else { try { await sendMessage({ action: "addWhitelist", host }); } catch { } isWhitelisted = true; if (!pgTranslating && !S.autoTranslate) { showToast("已加入白名单，刷新后生效"); } else { showToast("已加入白名单，始终自动翻译"); } } closeFloatMenu(); } },
     { icon: svgIcon("ban"), label: "永久禁用此网站", desc: "此网站完全禁用网页翻译", cls: "danger", action: async () => { const host = location.hostname; try { await sendMessage({ action: "addBlacklist", host }); } catch { } revertPageTranslation(); removeFloat(); closeFloatMenu(); showToast("已加入网页翻译黑名单"); } },
   ];
   items.forEach((it) => {
@@ -472,8 +472,8 @@ async function init() {
     isBlacklisted = checkBlacklist(location.hostname, S.blacklist);
   }
 
-  if (S.autoBlacklist?.length) {
-    isAutoBlacklisted = checkBlacklist(location.hostname, S.autoBlacklist);
+  if (S.autoWhitelist?.length) {
+    isWhitelisted = checkBlacklist(location.hostname, S.autoWhitelist);
   }
 
   updateToolbarIcon();
@@ -495,7 +495,7 @@ async function init() {
       if (changes.settings) {
         S = { ...S, ...changes.settings.newValue };
         isBlacklisted = checkBlacklist(location.hostname, S.blacklist || []);
-        isAutoBlacklisted = checkBlacklist(location.hostname, S.autoBlacklist || []);
+        isWhitelisted = checkBlacklist(location.hostname, S.autoWhitelist || []);
       }
     });
     return;
@@ -509,7 +509,7 @@ async function init() {
   if (siteRule) {
     pageLangDisabled = shouldSkipTranslation(targetLang, siteRule);
     if (S.enPage && !pageLangDisabled && S.enFloat) createFloat();
-    if (S.enPage && !pageLangDisabled && S.autoTranslate && !isAutoBlacklisted && siteRule.autoTranslate) {
+    if (S.enPage && !pageLangDisabled && (S.autoTranslate || isWhitelisted) && siteRule.autoTranslate) {
       pgTranslating = true;
       const st = await showTransStatus(`匹配规则: ${siteRule.name}，自动翻译`);
       await applyPageRule(siteRule, "auto", targetLang, S.pgEngine || "google");
@@ -520,7 +520,7 @@ async function init() {
   } else {
     pageLangDisabled = shouldSkipTranslation(targetLang, null);
     if (S.enPage && !pageLangDisabled && S.enFloat) createFloat();
-    if (S.enPage && !pageLangDisabled && S.autoTranslate && !isAutoBlacklisted) {
+    if (S.enPage && !pageLangDisabled && (S.autoTranslate || isWhitelisted)) {
       siteRule = GENERIC_RULE;
       const st = await showTransStatus("未匹配到规则，使用通用规则");
       await applyPageRule(GENERIC_RULE, "auto", targetLang, S.pgEngine || "google");
@@ -575,7 +575,7 @@ async function init() {
       const newTargetLang = S.pgTL || S.selTL;
       pageLangDisabled = shouldSkipTranslation(newTargetLang, siteRule);
       isBlacklisted = checkBlacklist(location.hostname, S.blacklist || []);
-      isAutoBlacklisted = checkBlacklist(location.hostname, S.autoBlacklist || []);
+      isWhitelisted = checkBlacklist(location.hostname, S.autoWhitelist || []);
       if (S.enFloat && !isBlacklisted && (siteRule || !pageLangDisabled) && !sessionDisabled) createFloat();
       else removeFloat();
     }

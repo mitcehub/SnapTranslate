@@ -24,57 +24,6 @@ function setEngineSelect(id, selected) {
   }
 }
 
-function renderBlacklist(blacklist, saveFn) {
-  const container = document.getElementById("blacklistContainer");
-  if (!container) return;
-  container.innerHTML = "";
-  if (!blacklist || !blacklist.length) {
-    const empty = document.createElement("div");
-    empty.className = "blacklist-empty";
-    empty.textContent = "No sites in blacklist";
-    empty.style.cssText = "color:#9ca3af;font-size:12px;padding:8px 0;";
-    container.appendChild(empty);
-    return;
-  }
-  const list = document.createElement("div");
-  list.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
-  blacklist.forEach((host) => {
-    const chip = document.createElement("div");
-    chip.className = "blacklist-chip";
-    chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid #fecaca;border-radius:14px;font-size:11px;color:#dc2626;background:#fef2f2;";
-    chip.innerHTML = `<span>${escHtml(host)}</span><button class="remove" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;">&times;</button>`;
-    chip.querySelector(".remove").addEventListener("click", () => {
-      const updated = blacklist.filter((h) => h !== host);
-      saveFn(updated);
-    });
-    list.appendChild(chip);
-  });
-  container.appendChild(list);
-}
-
-function renderRulesList(rules) {
-  const container = document.getElementById("rulesList");
-  if (!container) return;
-  container.innerHTML = "";
-  if (!rules || !rules.length) {
-    const empty = document.createElement("div");
-    empty.style.cssText = "color:#9ca3af;font-size:12px;padding:8px 0;";
-    empty.textContent = "No rules loaded";
-    container.appendChild(empty);
-    return;
-  }
-  const list = document.createElement("div");
-  list.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;padding-top:8px;";
-  rules.forEach((rule) => {
-    const chip = document.createElement("div");
-    chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid #e2e8f0;border-radius:14px;font-size:11px;color:#475569;background:#f8fafc;";
-    const autoTag = rule.autoTranslate ? '<span style="color:#059669;font-weight:600;">Auto</span>' : '<span style="color:#9ca3af;">Manual</span>';
-    chip.innerHTML = `<span style="font-weight:500;">${escHtml(rule.name)}</span>${autoTag}<span style="color:#94a3b8;">${escHtml(rule.urlPattern)}</span>`;
-    list.appendChild(chip);
-  });
-  container.appendChild(list);
-}
-
 const IGN_LANG_OPTIONS = [
   { code: "zh-CN", label: "中文" },
   { code: "en", label: "English" },
@@ -94,12 +43,12 @@ function renderIgnLangs(ignLangs, onChange) {
   wrap.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
   IGN_LANG_OPTIONS.forEach((l) => {
     const chip = document.createElement("label");
-    chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid #e2e8f0;border-radius:14px;font-size:11px;color:#475569;cursor:pointer;transition:all .15s;user-select:none;";
+    chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid var(--border);border-radius:14px;font-size:11px;color:var(--text-secondary);cursor:pointer;transition:all .15s;user-select:none;";
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.value = l.code;
     cb.checked = ignLangs.includes(l.code);
-    cb.style.cssText = "margin:0;width:12px;height:12px;accent-color:#6366f1;cursor:pointer;";
+    cb.style.cssText = "margin:0;width:12px;height:12px;accent-color:var(--accent);cursor:pointer;";
     cb.addEventListener("change", () => {
       const checked = [...wrap.querySelectorAll("input:checked")].map((i) => i.value);
       onChange(checked);
@@ -115,13 +64,13 @@ function renderIgnLangs(ignLangs, onChange) {
 
 function updateChipStyle(chip, checked) {
   if (checked) {
-    chip.style.background = "#eef2ff";
-    chip.style.borderColor = "#c7d2fe";
-    chip.style.color = "#4338ca";
+    chip.style.background = "var(--accent-bg)";
+    chip.style.borderColor = "var(--accent-border)";
+    chip.style.color = "var(--accent)";
   } else {
-    chip.style.background = "#fff";
-    chip.style.borderColor = "#e2e8f0";
-    chip.style.color = "#475569";
+    chip.style.background = "var(--bg-surface)";
+    chip.style.borderColor = "var(--border)";
+    chip.style.color = "var(--text-secondary)";
   }
 }
 
@@ -151,33 +100,6 @@ function testEngine(btnId, engineId) {
   });
 }
 
-function renderAutoBlacklist(autoBlacklist, saveFn) {
-  const container = document.getElementById("autoBlacklistContainer");
-  if (!container) return;
-  container.innerHTML = "";
-  if (!autoBlacklist || !autoBlacklist.length) {
-    const empty = document.createElement("div");
-    empty.className = "blacklist-empty";
-    empty.textContent = "No sites in blacklist";
-    empty.style.cssText = "color:#9ca3af;font-size:12px;padding:8px 0;";
-    container.appendChild(empty);
-    return;
-  }
-  const list = document.createElement("div");
-  list.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
-  autoBlacklist.forEach((host) => {
-    const chip = document.createElement("div");
-    chip.style.cssText = "display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid #e2e8f0;border-radius:14px;font-size:11px;color:#475569;background:#f8fafc;";
-    chip.innerHTML = `<span>${escHtml(host)}</span><button class="remove" style="border:none;background:none;color:#6b7280;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;">&times;</button>`;
-    chip.querySelector(".remove").addEventListener("click", () => {
-      const updated = autoBlacklist.filter((h) => h !== host);
-      saveFn(updated);
-    });
-    list.appendChild(chip);
-  });
-  container.appendChild(list);
-}
-
 export async function initSettingsUI() {
   applyI18N();
 
@@ -200,16 +122,14 @@ export async function initSettingsUI() {
   document.getElementById("enPage").checked = settings.enPage !== false;
   document.getElementById("enFloat").checked = settings.enFloat !== false;
   document.getElementById("autoTranslate").checked = settings.autoTranslate === true;
-  document.getElementById("allowRemoteTTS").checked = settings.allowRemoteTTS === true;
+  document.getElementById("allowRemoteTTS").checked = settings.allowRemoteTTS !== false;
 
   renderIgnLangs(settings.ignLangs || [], (newIgnLangs) => {
     settings.ignLangs = newIgnLangs;
     save();
   });
 
-  const rulesUrlInput = document.getElementById("rulesUrl");
-  if (rulesUrlInput) rulesUrlInput.value = settings.rulesUrl || "";
-
+  // Blacklist
   const blacklistText = document.getElementById("blacklistText");
   if (blacklistText) {
     blacklistText.value = (settings.blacklist || []).join('\n');
@@ -219,14 +139,42 @@ export async function initSettingsUI() {
     });
   }
 
-  const autoBlacklistText = document.getElementById("autoBlacklistText");
-  if (autoBlacklistText) {
-    autoBlacklistText.value = (settings.autoBlacklist || []).join('\n');
-    autoBlacklistText.addEventListener("input", () => {
-      settings.autoBlacklist = autoBlacklistText.value.split('\n').map(s => s.trim()).filter(Boolean);
+  // Whitelist
+  const whitelistText = document.getElementById("whitelistText");
+  if (whitelistText) {
+    whitelistText.value = (settings.autoWhitelist || []).join('\n');
+    whitelistText.addEventListener("input", () => {
+      settings.autoWhitelist = whitelistText.value.split('\n').map(s => s.trim()).filter(Boolean);
       save();
     });
   }
+
+  // Sort buttons - toggle asc/desc
+  document.getElementById("sortBlacklist")?.addEventListener("click", (e) => {
+    if (!settings.blacklist?.length) return;
+    const btn = e.currentTarget;
+    const order = btn.dataset.order === "asc" ? "desc" : "asc";
+    btn.dataset.order = order;
+    btn.textContent = order === "asc" ? "排序 ↑" : "排序 ↓";
+    settings.blacklist = [...settings.blacklist].sort((a, b) =>
+      order === "asc" ? a.localeCompare(b) : b.localeCompare(a)
+    );
+    blacklistText.value = settings.blacklist.join('\n');
+    save();
+  });
+
+  document.getElementById("sortWhitelist")?.addEventListener("click", (e) => {
+    if (!settings.autoWhitelist?.length) return;
+    const btn = e.currentTarget;
+    const order = btn.dataset.order === "asc" ? "desc" : "asc";
+    btn.dataset.order = order;
+    btn.textContent = order === "asc" ? "排序 ↑" : "排序 ↓";
+    settings.autoWhitelist = [...settings.autoWhitelist].sort((a, b) =>
+      order === "asc" ? a.localeCompare(b) : b.localeCompare(a)
+    );
+    whitelistText.value = settings.autoWhitelist.join('\n');
+    save();
+  });
 
   function save() {
     const newSettings = {
@@ -241,11 +189,11 @@ export async function initSettingsUI() {
       enPage: document.getElementById("enPage")?.checked ?? true,
       enFloat: document.getElementById("enFloat")?.checked ?? true,
       autoTranslate: document.getElementById("autoTranslate")?.checked ?? false,
-      allowRemoteTTS: document.getElementById("allowRemoteTTS")?.checked ?? false,
+      allowRemoteTTS: document.getElementById("allowRemoteTTS")?.checked ?? true,
       ignLangs: settings.ignLangs || [],
       blacklist: settings.blacklist || [],
-      autoBlacklist: settings.autoBlacklist || [],
-      rulesUrl: document.getElementById("rulesUrl")?.value || "",
+      autoWhitelist: settings.autoWhitelist || [],
+      rulesUrl: settings.rulesUrl || "",
     };
     chrome.runtime.sendMessage({ action: "saveSettings", settings: newSettings });
   }
@@ -263,26 +211,4 @@ export async function initSettingsUI() {
   document.getElementById("testSelEngine").addEventListener("click", () => testEngine("testSelEngine", "selEngine"));
   document.getElementById("testInputEngine").addEventListener("click", () => testEngine("testInputEngine", "inputEngine"));
   document.getElementById("testPgEngine")?.addEventListener("click", () => testEngine("testPgEngine", "pgEngine"));
-
-  if (rulesUrlInput) {
-    rulesUrlInput.addEventListener("change", save);
-  }
-
-  document.getElementById("refreshRulesBtn")?.addEventListener("click", () => {
-    const btn = document.getElementById("refreshRulesBtn");
-    const lang = getUILang();
-    const strings = I18N[lang] || I18N.en;
-    btn.disabled = true;
-    btn.textContent = "...";
-    chrome.runtime.sendMessage({ action: "refreshRules" }, (r) => {
-      btn.disabled = false;
-      if (r && r.rules) {
-        btn.textContent = "OK ✓";
-        renderRulesList(r.rules);
-      } else {
-        btn.textContent = "Fail ✗";
-      }
-      setTimeout(() => { btn.textContent = strings.refreshRulesBtn || "Refresh"; }, 3000);
-    });
-  });
 }
