@@ -4,10 +4,3 @@ node_modules/
 *.bak
 spec/
 dist/
-Translate/node_modules/
-Translate/src/background/bundled-rules.js
-immersive-translate/
-rules/
-沉浸式翻译/
-沉浸式翻译-deobf/
-沉浸式翻译谷歌版本/

@@ -875,8 +875,6 @@
     "times",
     "[data-snap-translated]",
     "[data-click-id]",
-    "#immersive-translate-popup",
-    "#immersive-translate-float-ball",
     "#monica-content-root",
     "script",
     "style",

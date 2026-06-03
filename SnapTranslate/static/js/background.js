@@ -910,9 +910,6 @@
   		matches: [
   			"balthild.github.io"
   		],
-  		injectedCss: [
-  			".immersive-translate-target-wrapper [aria-hidden=true] {display:none;}"
-  		],
   		autoTranslate: true,
   		translateUI: false
   	},
@@ -940,8 +937,7 @@
   		],
   		injectedCss: [
   			".product_name {-webkit-line-clamp: unset!important;}",
-  			".lists_goods_content > div {height: unset!important; min-height: 76px}",
-  			".immersive-translate-target-inner {font-family: sans-serif !important;}"
+  			".lists_goods_content > div {height: unset!important; min-height: 76px}"
   		],
   		autoTranslate: true,
   		translateUI: false
@@ -953,9 +949,6 @@
   		],
   		extraInlineSelectors: [
   			"article p span"
-  		],
-  		injectedCss: [
-  			"font.immersive-translate-target-wrapper > br {display:none;}"
   		],
   		autoTranslate: true,
   		translateUI: false
@@ -1295,7 +1288,6 @@
   			"#chat-messages > .group:not(:first-child) .font-display *"
   		],
   		injectedCss: [
-  			".immersive-translate-target-wrapper br {display:none;}",
   			"[imt-state=dual] .prose p {margin:0;}"
   		],
   		globalStyles: {
@@ -1376,8 +1368,7 @@
   		injectedCss: [
   			"a { height: unset !important; }",
   			"li { height: unset !important; }",
-  			"div { height: unset !important; }",
-  			".immersive-translate-target-inner {color:black;}"
+  			"div { height: unset !important; }"
   		],
   		autoTranslate: true,
   		translateUI: false
@@ -1852,9 +1843,6 @@
   		excludeSelectors: [
   			"h1.home-hero"
   		],
-  		injectedCss: [
-  			".immersive-translate-target-wrapper, .immersive-translate-target-wrapper *{color:unset!important;}"
-  		],
   		autoTranslate: true,
   		translateUI: false
   	},
@@ -2026,10 +2014,6 @@
   		],
   		stayOriginalSelectors: [
   			".tooltip"
-  		],
-  		injectedCss: [
-  			".immersive-translate-target-inner .tooltiptext {display: none;}",
-  			".immersive-translate-target-inner .tooltip {cursor:pointer;border-bottom:unset;}"
   		],
   		autoTranslate: true,
   		translateUI: false
@@ -2408,9 +2392,6 @@
   		extraBlockSelectors: [
   			".mp-nav a"
   		],
-  		injectedCss: [
-  			".immersive-translate-target-translation-block-wrapper {display: unset!important;}"
-  		],
   		globalStyles: {
   			"#mw-content-text > div > div:nth-child(1)": "height:100%;"
   		},
@@ -2616,9 +2597,6 @@
   		name: "floatSites",
   		matches: [
   			"docs.stripe.com"
-  		],
-  		injectedCss: [
-  			".immersive-translate-target-translation-block-wrapper {display: inline !important;}"
   		],
   		autoTranslate: true,
   		translateUI: false
@@ -3429,9 +3407,6 @@
   			"https://news.ycombinator.com/newsguidelines.html",
   			"https://news.ycombinator.com/security.html"
   		],
-  		injectedCss: [
-  			".immersive-translate-target-wrapper {content-visibility:auto;}"
-  		],
   		autoTranslate: true,
   		translateUI: false
   	},
@@ -3909,9 +3884,6 @@
   	},
   	{
   		name: "isEbook",
-  		selectors: [
-  			"meta[name='immersive-translate-ebook-viewer'][content='true']"
-  		],
   		excludeSelectors: [
   			"#drop-target",
   			"#drop-target h1",
@@ -3920,9 +3892,6 @@
   		],
   		extraInlineSelectors: [
   			"span.dropcaps"
-  		],
-  		injectedCss: [
-  			".immersive-translate-target-translation-block-wrapper {display:block;}"
   		],
   		paragraphMinTextCount: 4,
   		paragraphMinWordCount: 2,
@@ -3944,9 +3913,6 @@
   			"https://immersivetranslate.*/*/*/ebook-make*",
   			"https://immersivetranslate.com/*/document/ebook-make/*"
   		],
-  		selectors: [
-  			"meta[name='immersive-translate-ebook-builder'][content='true']"
-  		],
   		excludeSelectors: [
   			"h1.notranslate",
   			"#drop-target",
@@ -3956,9 +3922,6 @@
   			"#tool",
   			".Code",
   			"[default-translate]"
-  		],
-  		injectedCss: [
-  			".immersive-translate-target-translation-block-wrapper {display:block;}"
   		],
   		paragraphMinTextCount: 1,
   		paragraphMinWordCount: 1,
@@ -3978,9 +3941,6 @@
   			"https://*.immersivetranslate.*/*/subtitle*",
   			"https://immersivetranslate.com/*/document/subtitle/*",
   			"https://immersivetranslate.com/*/document/download-subtitle/*"
-  		],
-  		selectors: [
-  			"meta[name='immersive-translate-subtitle-builder'][content='true']"
   		],
   		paragraphMinTextCount: 4,
   		paragraphMinWordCount: 2,
@@ -4402,9 +4362,6 @@
   	},
   	{
   		name: "live_attach_basic",
-  		selectors: [
-  			"meta[name='immersive-translate-live-attach-basic'][content='true']"
-  		],
   		autoTranslate: true,
   		translateUI: false
   	},
@@ -4788,9 +4745,6 @@
   			".md-sidebar__inner",
   			".md-container[data-md-component]"
   		],
-  		injectedCss: [
-  			".md-sidebar__inner .immersive-translate-target-wrapper {display: inline-flex;}"
-  		],
   		autoTranslate: true,
   		translateUI: false
   	},
@@ -4950,9 +4904,6 @@
   		excludeMatches: [
   			"https://www.nature.com/articles/*.pdf"
   		],
-  		injectedCss: [
-  			".immersive-translate-target-wrapper {content-visibility:auto;}"
-  		],
   		autoTranslate: true,
   		translateUI: false
   	},
@@ -5059,8 +5010,7 @@
   			"nextjs.org"
   		],
   		injectedCss: [
-  			"[imt-state=dual] .styled-scrollbar ul li ul li ul li ul li a {white-space:nowrap!important;}",
-  			"[imt-state=dual] .styled-scrollbar ul li font.immersive-translate-target-wrapper {text-align: right;width: 100%;}"
+  			"[imt-state=dual] .styled-scrollbar ul li ul li ul li ul li a {white-space:nowrap!important;}"
   		],
   		autoTranslate: true,
   		translateUI: false
@@ -5390,9 +5340,6 @@
   		matches: [
   			"www.orchestraltools.com"
   		],
-  		injectedCss: [
-  			".immersive-translate-target-wrapper *, .immersive-translate-target-wrapper {font-size: inherit !important;}"
-  		],
   		autoTranslate: true,
   		translateUI: false
   	},
@@ -5628,17 +5575,7 @@
   			"http://localhost:38001/pdf*"
   		],
   		selectors: [
-  			"#viewerContainer p",
-  			"meta[name='immersive-translate-pdf-viewer'][content='true']"
-  		],
-  		injectedCss: [
-  			".immersive-translate-target-wrapper {display: contents!important;position:absolute;}",
-  			".immersive-translate-target-wrapper br {display: none;!important;}",
-  			".immersive-translate-target-wrapper span {position: relative;!important;}",
-  			".immersive-translate-error-wrapper {padding:0px !important;margin:0px !important;}",
-  			".immersive-translate-target-translation-block-wrapper {display: unset!important;}",
-  			".immersive-translate-target-inner div div {border:unset!important;padding:0!important;}",
-  			".immersive-translate-target-wrapper[dir='rtl'] {text-align: right;display: inline-block!important;position:unset;}"
+  			"#viewerContainer p"
   		],
   		isTranslateTitle: false,
   		detectParagraphLanguage: true,
@@ -5960,8 +5897,6 @@
   			".sub-table tr"
   		],
   		injectedCss: [
-  			".immersive-translate-target-wrapper {white-space: unset;}",
-  			"[data-immersive-translate_rtl] .immersive-translate-target-translation-block-wrapper {width:100%}",
   			"* {text-decoration:unset;}"
   		],
   		detectParagraphLanguage: true,
@@ -6067,9 +6002,7 @@
   		injectedCss: [
   			"#Scholarscope_HighlightOrigin > p font,#Scholarscope_HighlightContent > p font {display: inline!important;}",
   			"#Scholarscope_HighlightOrigin > p font br,#Scholarscope_HighlightContent > p font br {display: none!important;}",
-  			".title-translate {display:block;}",
-  			".immersive-translate-target-inner br{display:none;}",
-  			".immersive-translate-target-wrapper {content-visibility:auto;}"
+  			".title-translate {display:block;}"
   		],
   		autoTranslate: true,
   		translateUI: false
@@ -6487,9 +6420,6 @@
   		matches: [
   			"www.sakura.fm"
   		],
-  		injectedCss: [
-  			".immersive-translate-target-wrapper, .immersive-translate-target-translation-block-wrapper, .immersive-translate-target-inner span { opacity: 1 !important; }"
-  		],
   		autoTranslate: true,
   		translateUI: false
   	},
@@ -6542,8 +6472,7 @@
   		],
   		injectedCss: [
   			"h2 {font-size:unset;}",
-  			".u-clamp-2-lines {-webkit-line-clamp:unset!important;}",
-  			".immersive-translate-target-wrapper {content-visibility:auto;}"
+  			".u-clamp-2-lines {-webkit-line-clamp:unset!important;}"
   		],
   		autoTranslate: true,
   		translateUI: false
@@ -7480,9 +7409,6 @@
   			"m.yxlady.com",
   			"web3.fireverseai.com"
   		],
-  		injectedCss: [
-  			".immersive-translate-target-wrapper, .immersive-translate-target-translation-block-wrapper, .immersive-translate-target-inner { font-size: unset; }"
-  		],
   		autoTranslate: true,
   		translateUI: false
   	},
@@ -8131,9 +8057,7 @@
   			".nowrap"
   		],
   		injectedCss: [
-  			".immersive-translate-target-translation-block-wrapper { display: block !important; }",
-  			".mwe-popups-extract {max-height:unset!important;height:unset!important;}",
-  			".immersive-translate-target-wrapper {content-visibility:auto;}"
+  			".mwe-popups-extract {max-height:unset!important;height:unset!important;}"
   		],
   		globalStyles: {
   			".no-article-text-sister-projects li": "height:unset;"
@@ -8224,10 +8148,6 @@
   		],
   		extraBlockSelectors: [
   			".series-nav__link-thumbnail"
-  		],
-  		injectedCss: [
-  			".immersive-translate-target-wrapper br {display:none;}",
-  			".spcv_list-item .immersive-translate-target-translation-block-wrapper {display:inline-block;margin-top:8px;}"
   		],
   		autoTranslate: true,
   		translateUI: false
@@ -8578,10 +8498,7 @@
   			".caption-visual-line"
   		],
   		injectedCss: [
-  			".immersive-translate-target-wrapper img { width: 16px; height: 16px }",
   			".metadata-snippet-container {max-height: unset !important;}",
-  			".immersive-translate-target-wrapper {text-align: left;}",
-  			".immersive-translate-target-wrapper[dir=rtl] {text-align: right;}",
   			"#commentCanvas .cmt {display:flex;flex-direction: column;}",
   			"#commentCanvas .cmt font br {display: none;}",
   			"#video-title,h1.ytd-watch-metadata,.ytd-video-renderer,.yt-lockup-metadata-view-model-wiz__title {-webkit-line-clamp: unset !important;max-height: unset !important;}",
@@ -8663,7 +8580,6 @@
   			".caption-visual-line"
   		],
   		injectedCss: [
-  			".immersive-translate-target-wrapper img { width: 16px; height: 16px }",
   			".shortsLockupViewModelHostMetadataTitle,h4.compact-media-item-headline {max-height:unset !important;line-clamp:unset !important;overflow:unset !important;-webkit-line-clamp:unset !important;}",
   			".comment-text {max-height:unset;}",
   			".details,.subhead,.video-card-title,.media-item-headline {max-height:unset!important;-webkit-line-clamp:unset!important;}",
@@ -8780,15 +8696,7 @@
   		],
   		excludeMatches: [
   		],
-  		selectors: [
-  		],
   		excludeSelectors: [
-  		],
-  		injectedCss: [
-  		],
-  		extraBlockSelectors: [
-  		],
-  		extraInlineSelectors: [
   		],
   		stayOriginalSelectors: [
   		],
@@ -8802,15 +8710,7 @@
   		matches: "store.steampowered.com",
   		excludeMatches: [
   		],
-  		selectors: [
-  		],
   		excludeSelectors: [
-  		],
-  		injectedCss: [
-  		],
-  		extraBlockSelectors: [
-  		],
-  		extraInlineSelectors: [
   		],
   		stayOriginalSelectors: [
   		],
@@ -8823,16 +8723,8 @@
   		],
   		excludeMatches: [
   		],
-  		selectors: [
-  		],
   		excludeSelectors: [
   			".carousel-item"
-  		],
-  		injectedCss: [
-  		],
-  		extraBlockSelectors: [
-  		],
-  		extraInlineSelectors: [
   		],
   		stayOriginalSelectors: [
   		]
